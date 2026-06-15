@@ -29,7 +29,6 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.9.3",
-    "builtin-modules": "^5.2.0",
     "esbuild": "^0.28.1",
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",

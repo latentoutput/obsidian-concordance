@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Dependency audit
+        run: npm run deps:audit
+
+      - name: Build
+        run: node esbuild.config.mjs production
+
+      - name: Verify manifest version matches tag
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          MANIFEST_VERSION=$(node -p "require('./manifest.json').version")
+          if [ "$MANIFEST_VERSION" != "$VERSION" ]; then
+            echo "manifest.json version ($MANIFEST_VERSION) does not match tag ($VERSION)" >&2
+            exit 1
+          fi
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          NOTES=$(awk -v v="$VERSION" '/^## \[/{if(p)exit; if($0 ~ "\\["v"\\]")p=1; next} p' CHANGELOG.md 2>/dev/null || true)
+          TRIMMED=$(printf '%s' "$NOTES" | tr -d '[:space:]')
+          if [ -n "$TRIMMED" ]; then
+            echo "Using CHANGELOG.md section for $VERSION"
+            printf '%s\n' "$NOTES" | gh release create "$VERSION" main.js manifest.json styles.css --title "$VERSION" --notes-file -
+          else
+            echo "No CHANGELOG.md section for $VERSION; using auto-generated notes"
+            gh release create "$VERSION" main.js manifest.json styles.css --title "$VERSION" --generate-notes
+          fi

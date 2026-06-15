@@ -10,6 +10,35 @@ otherwise skip it and let autogen handle the routine releases.
 Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project follows [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-06-14
+
+Addresses feedback from the Obsidian community-plugin review bot.
+
+### Added
+
+- GitHub Actions release workflow that builds, runs the full QA suite, and
+  generates [artifact attestations](https://docs.github.com/en/actions/security-for-github-actions/using-artifact-attestations/using-artifact-attestations-to-establish-provenance-for-builds)
+  for `main.js`, `manifest.json`, and `styles.css`. Release assets are now
+  cryptographically tied to the source commit they were built from.
+
+### Changed
+
+- Settings tab migrated from the deprecated imperative `display()` API to
+  Obsidian 1.13's declarative `getSettingDefinitions()`. No user-visible
+  behaviour change.
+
+### Removed
+
+- `builtin-modules` dev dependency. The plugin doesn't import Node APIs, so
+  the external-modules list in the esbuild config never needed Node
+  builtins.
+
+### Fixed
+
+- Two `unknown`-typed values coming out of Obsidian's `MetadataCache` are
+  now explicitly annotated, resolving "unsafe `any` assignment" lints
+  without changing runtime behaviour.
+
 ## [0.1.0] - 2026-06-14
 
 First public release.

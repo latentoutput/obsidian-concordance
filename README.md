@@ -26,6 +26,24 @@ one file.
   by `name` vs `path`).
 - **Exclusions** for folders and filename substrings, applied to every mode.
 
+## Screenshots
+
+A Concordance-managed index file. The list inside the `%% concordance %%`
+markers is regenerated each run; everything outside is yours.
+
+![A Concordance-managed index note, with curated prose above and below the auto-generated wikilink list](docs/screenshots/hero.png)
+
+The update modal shows exactly what will change — links added, removed, and
+unchanged — before any file is written to disk.
+
+![The update confirmation modal, listing matched notes, added links, removed links, and unchanged links with expandable details](docs/screenshots/update_modal.png)
+
+Marker attributes drive non-prefix modes. Tag, folder, and frontmatter
+property indexes are all configured the same way — just by editing the
+options in the start marker.
+
+![A tag-mode index showing the mode and tag attributes in the start marker, populating a wikilink list of recipe notes](docs/screenshots/tag_mode.png)
+
 ## Installation
 
 ### From the Community Plugins browser (after acceptance)
@@ -195,25 +213,36 @@ make release
 
 **`release`**:
 
-1. Runs the full `qa` suite (typecheck + lint + tests + format check +
-   markdown lint + production build + dependency audit)
+1. Runs the full local `qa` suite (typecheck + lint + tests + format check +
+   markdown lint + production build + dependency audit). If anything fails,
+   the tag is not pushed.
 2. Tags the current `manifest.json` version if it isn't already tagged
-   (covers the first-release case)
-3. Pushes commits and tags to `origin`
-4. Calls `gh release create <version> main.js manifest.json styles.css`,
-   using one of two notes sources:
-   - If `CHANGELOG.md` has a `## [<version>]` section, those notes are used.
-   - Otherwise GitHub auto-generates notes from commits and PRs since the
-     previous tag.
+   (covers the first-release case).
+3. Pushes commits and tags to `origin`.
+
+The push triggers the `release.yml` GitHub Actions workflow, which:
+
+- Re-runs typecheck, lint, tests, audit, and the production build in CI for
+  a clean-room rebuild
+- Verifies that `manifest.json`'s version matches the pushed tag
+- **Generates GitHub artifact attestations** for `main.js`, `manifest.json`,
+  and `styles.css` (cryptographic provenance proving the assets were built
+  from the source repository at this commit; users and reviewers can verify
+  with `gh attestation verify`)
+- Creates the GitHub release, attaching the three assets and using
+  `CHANGELOG.md`'s `## [<version>]` section if present, otherwise
+  auto-generated notes from commits since the previous tag
 
 The three files attached to the release (`main.js`, `manifest.json`,
 `styles.css`) are exactly what Obsidian's community-plugin reviewer
 downloads. **Do not** attach the source archive — only the bundled `main.js`
 runs in users' vaults.
 
+Tail the release workflow after pushing with `gh run watch --exit-status`.
+
 #### Release notes
 
-`CHANGELOG.md` is optional. Edit it before `make release` only when you want
+`CHANGELOG.md` is optional. Edit it before pushing the tag only when you want
 curated hero notes (initial release, major versions, breaking changes).
 Routine patches and minor releases work fine with auto-generated notes.
 

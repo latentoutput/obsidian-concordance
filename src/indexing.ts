@@ -362,7 +362,7 @@ function getAllTagsFromCache(cache: CachedMetadata | null): Set<string> {
     }
   }
 
-  const frontmatterTags = cache.frontmatter?.tags;
+  const frontmatterTags: unknown = cache.frontmatter?.tags;
 
   if (Array.isArray(frontmatterTags)) {
     for (const entry of frontmatterTags) {
@@ -390,14 +390,14 @@ function frontmatterMatches(
     return false;
   }
 
-  const raw = frontmatter[property];
+  const raw: unknown = frontmatter[property];
 
   if (raw === null || raw === undefined) {
     return false;
   }
 
   if (Array.isArray(raw)) {
-    return raw.some((entry) => String(entry).trim() === value);
+    return raw.some((entry: unknown) => String(entry).trim() === value);
   }
 
   return String(raw).trim() === value;
