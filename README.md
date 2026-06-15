@@ -146,12 +146,26 @@ for subfolder matches so wikilinks resolve unambiguously.
 
 ## Safety model
 
+### Writes
+
 - Concordance only writes between `%% concordance:start %%` and
-  `%% concordance:end %%`. Everything else in the file is preserved.
-- If the markers are missing or duplicated, no write happens and you receive a
-  notice describing the problem.
-- All updates go through a confirmation modal that lists what will be added and
-  removed before any file is touched.
+  `%% concordance:end %%`. Everything else in a file is preserved.
+- If the markers are missing or duplicated, no write happens and you receive
+  a notice describing the problem.
+- All updates go through a confirmation modal that lists what will be added
+  and removed before any file is touched.
+
+### Reads and data access
+
+- The plugin enumerates Markdown file paths in your vault via Obsidian's
+  `vault.getMarkdownFiles()` to find candidate notes for an index.
+- For `tag` and `property` modes, it reads cached metadata (tags and
+  frontmatter) via Obsidian's `MetadataCache` — no extra file I/O.
+- The only file contents the plugin actually loads are the index files
+  themselves, so it can locate the managed marker block.
+- The plugin makes **no network requests** and writes nothing outside the
+  configured index files. Nothing is collected, transmitted, or stored
+  outside your vault.
 
 ## Contributing
 
