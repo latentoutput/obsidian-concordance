@@ -1,6 +1,6 @@
 {
   "name": "obsidian-concordance",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generate safe Markdown indexes from folders, tags, properties, and filename patterns in Obsidian.",
   "main": "main.js",
   "type": "module",
