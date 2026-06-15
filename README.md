@@ -137,6 +137,10 @@ for subfolder matches so wikilinks resolve unambiguously.
 
 ## Development
 
+Requires a Node LTS release (Node 24 LTS or newer LTS). Node "Current"
+releases (odd-numbered) sometimes ship with an npm that breaks `npm install`
+and `npm audit`.
+
 ```sh
 npm install
 npm run dev          # watch build
