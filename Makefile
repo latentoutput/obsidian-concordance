@@ -1,4 +1,4 @@
-.PHONY: install dev build typecheck lint lint-fix test format format-check markdownlint audit outdated qa security security-history clean
+.PHONY: install dev build typecheck lint lint-fix test format format-check markdownlint audit outdated qa security security-history clean bump bump-patch bump-minor bump-major release release-patch release-minor release-major
 
 install:
 	npm install
@@ -47,3 +47,35 @@ security-history:
 
 clean:
 	rm -f main.js
+
+bump:
+	@if [ -z "$(VERSION)" ]; then echo "Usage: make bump VERSION=X.Y.Z (or patch|minor|major)" >&2; exit 1; fi
+	npm version $(VERSION)
+
+bump-patch:
+	npm version patch
+
+bump-minor:
+	npm version minor
+
+bump-major:
+	npm version major
+
+release: qa
+	@VERSION=$$(node -p "require('./manifest.json').version"); \
+	  git rev-parse "$$VERSION" >/dev/null 2>&1 || git tag "$$VERSION"; \
+	  git push --follow-tags && \
+	  gh release create "$$VERSION" main.js manifest.json styles.css \
+	    --title "$$VERSION" --generate-notes
+
+release-patch:
+	$(MAKE) bump-patch
+	$(MAKE) release
+
+release-minor:
+	$(MAKE) bump-minor
+	$(MAKE) release
+
+release-major:
+	$(MAKE) bump-major
+	$(MAKE) release

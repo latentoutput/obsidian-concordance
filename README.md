@@ -146,6 +146,64 @@ npm run lint         # eslint
 npm run qa           # typecheck + lint + tests + format + build + audit
 ```
 
+### Cutting a release
+
+For most releases, one command:
+
+```sh
+make release-patch       # bug fixes:     0.1.0 → 0.1.1
+make release-minor       # new features:  0.1.0 → 0.2.0
+make release-major       # breaking:      0.1.0 → 1.0.0
+```
+
+Each combined target bumps the version, runs the full QA suite, builds, tags,
+pushes, and creates the GitHub release. If QA fails, the release stops before
+anything is published.
+
+For the very first release (where the bump is already in `manifest.json`),
+or to re-release the current version without a bump, run just:
+
+```sh
+make release
+```
+
+If you need to bump and release as separate steps (for example, to keep
+working on more commits between the bump and the publish):
+
+```sh
+make bump-patch          # or bump-minor / bump-major / bump VERSION=0.4.2
+# ...more commits if you want...
+make release
+```
+
+#### What the targets actually do
+
+**`bump-*`** wraps `npm version`, which:
+
+1. Updates `version` in `package.json`
+2. Runs the `version` script (`version-bump.mjs`), which:
+   - Sets `version` in `manifest.json`
+   - Appends a `{ newVersion → minAppVersion }` entry to `versions.json`
+3. Commits all three files in a single commit
+4. Creates a **bare semver tag** (e.g. `0.2.0`, never `v0.2.0`). Obsidian
+   requires bare tags; the bare form is enforced via `.npmrc`'s
+   `tag-version-prefix=""`.
+
+**`release`**:
+
+1. Runs the full `qa` suite (typecheck + lint + tests + format check +
+   markdown lint + production build + dependency audit)
+2. Tags the current `manifest.json` version if it isn't already tagged
+   (covers the first-release case)
+3. Pushes commits and tags to `origin`
+4. Calls `gh release create <version> main.js manifest.json styles.css`
+   with auto-generated release notes
+
+The three files attached to the release (`main.js`, `manifest.json`,
+`styles.css`) are exactly what Obsidian's community-plugin reviewer
+downloads. **Do not** attach the source archive — only the bundled `main.js`
+runs in users' vaults.
+
 ## Disclosure
 
 Developed with assistance from AI. All changes are reviewed and tested by the
