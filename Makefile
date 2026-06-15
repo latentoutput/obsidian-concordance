@@ -63,10 +63,19 @@ bump-major:
 
 release: qa
 	@VERSION=$$(node -p "require('./manifest.json').version"); \
+	  NOTES=$$(awk -v v="$$VERSION" '/^## \[/{if(p)exit; if($$0 ~ "\\["v"\\]")p=1; next} p' CHANGELOG.md 2>/dev/null); \
+	  TRIMMED=$$(printf "%s" "$$NOTES" | tr -d "[:space:]"); \
 	  git rev-parse "$$VERSION" >/dev/null 2>&1 || git tag "$$VERSION"; \
 	  git push --follow-tags && \
-	  gh release create "$$VERSION" main.js manifest.json styles.css \
-	    --title "$$VERSION" --generate-notes
+	  if [ -n "$$TRIMMED" ]; then \
+	    echo "Using CHANGELOG.md section for $$VERSION"; \
+	    printf '%s\n' "$$NOTES" | gh release create "$$VERSION" main.js manifest.json styles.css \
+	      --title "$$VERSION" --notes-file -; \
+	  else \
+	    echo "No CHANGELOG.md section for $$VERSION; using auto-generated notes"; \
+	    gh release create "$$VERSION" main.js manifest.json styles.css \
+	      --title "$$VERSION" --generate-notes; \
+	  fi
 
 release-patch:
 	$(MAKE) bump-patch

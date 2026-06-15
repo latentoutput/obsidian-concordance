@@ -200,13 +200,38 @@ make release
 2. Tags the current `manifest.json` version if it isn't already tagged
    (covers the first-release case)
 3. Pushes commits and tags to `origin`
-4. Calls `gh release create <version> main.js manifest.json styles.css`
-   with auto-generated release notes
+4. Calls `gh release create <version> main.js manifest.json styles.css`,
+   using one of two notes sources:
+   - If `CHANGELOG.md` has a `## [<version>]` section, those notes are used.
+   - Otherwise GitHub auto-generates notes from commits and PRs since the
+     previous tag.
 
 The three files attached to the release (`main.js`, `manifest.json`,
 `styles.css`) are exactly what Obsidian's community-plugin reviewer
 downloads. **Do not** attach the source archive — only the bundled `main.js`
 runs in users' vaults.
+
+#### Release notes
+
+`CHANGELOG.md` is optional. Edit it before `make release` only when you want
+curated hero notes (initial release, major versions, breaking changes).
+Routine patches and minor releases work fine with auto-generated notes.
+
+To curate notes for a release, add a section like this to `CHANGELOG.md`:
+
+```markdown
+## [0.2.0] - 2026-07-15
+
+Brief summary of what's new.
+
+### Added
+- New feature A.
+
+### Fixed
+- Bug B.
+```
+
+The Makefile reads the section matching `manifest.json`'s current version.
 
 ## Disclosure
 
