@@ -1,0 +1,42 @@
+{
+  "name": "obsidian-concordance",
+  "version": "0.1.0",
+  "description": "Generate safe Markdown indexes from folders, tags, properties, and filename patterns in Obsidian.",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "npm run typecheck && node esbuild.config.mjs production",
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "lint:md": "markdownlint-cli2 \"**/*.md\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "format": "prettier --write \"**/*.{css,js,json,jsonc,mjs,ts,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{css,js,json,jsonc,mjs,ts,yaml,yml}\"",
+    "deps:audit": "npm audit --audit-level=moderate",
+    "deps:outdated": "npm outdated",
+    "qa": "scripts/local-qa.sh",
+    "security": "scripts/local-security.sh"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin"
+  ],
+  "author": "nsyout",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "builtin-modules": "^5.2.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "markdownlint-cli2": "^0.22.1",
+    "obsidian": "^1.13.1",
+    "prettier": "^3.8.4",
+    "typescript-eslint": "^8.61.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
+}

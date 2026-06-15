@@ -1,0 +1,40 @@
+# Build output
+node_modules/
+main.js
+*.js.map
+coverage/
+
+# Plugin runtime data
+data.json
+
+# Tooling state
+.claude/
+.eslintcache
+.npm/
+
+# Environment / secrets
+.env
+.env.*
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Linux
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini

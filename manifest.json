@@ -1,0 +1,9 @@
+{
+  "id": "concordance",
+  "name": "Concordance",
+  "version": "0.1.0",
+  "minAppVersion": "1.13.1",
+  "description": "Generate safe Markdown indexes from folders, tags, properties, and filename patterns.",
+  "author": "nsyout",
+  "isDesktopOnly": false
+}

@@ -1,0 +1,48 @@
+.concordance-stats {
+  margin: 1em 0;
+}
+
+.concordance-stat {
+  align-items: center;
+  display: flex;
+  gap: 0.4em;
+  margin: 0.25em 0;
+}
+
+.concordance-stat-details > summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 0.4em;
+  list-style: none;
+}
+
+.concordance-stat-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.concordance-stat-details > ul {
+  margin: 0.35em 0 0.45em 2.25em;
+  padding-inline-start: 1em;
+}
+
+.concordance-stat-details > ul > li {
+  margin: 0.15em 0;
+}
+
+.concordance-stat-icon {
+  --icon-size: 1em;
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 1em;
+  justify-content: center;
+}
+
+.concordance-stat-icon-placeholder {
+  visibility: hidden;
+}
+
+.concordance-settings .setting-item-control textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
