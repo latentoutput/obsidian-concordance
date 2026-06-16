@@ -12,7 +12,7 @@ npm run dev          # watch build
 npm run build        # production build (typechecks first)
 npm run test         # vitest
 npm run lint         # eslint
-npm run qa           # typecheck + lint + tests + format + build + audit
+npm run qa           # typecheck + lint + tests + format + build + audit (production deps only)
 ```
 
 ## Project layout
