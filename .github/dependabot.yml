@@ -1,0 +1,25 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        patterns:
+          - "*"
+        # obsidian is pinned to ~1.8.7 to enforce the minAppVersion API
+        # contract. Keep it out of the bulk group so a new npm types
+        # release surfaces as its own PR — a notification that the
+        # Obsidian API has moved, not a PR to merge casually. Treat it as
+        # "decide whether to raise minAppVersion in lockstep," then merge
+        # or close.
+        exclude-patterns:
+          - "obsidian"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
