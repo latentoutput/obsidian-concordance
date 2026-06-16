@@ -1,5 +1,5 @@
-import { Notice, PluginSettingTab } from "obsidian";
-import type { App, SettingDefinitionItem } from "obsidian";
+import { Notice, PluginSettingTab, Setting } from "obsidian";
+import type { App } from "obsidian";
 import type ConcordancePlugin from "./main";
 
 export type MissingBlockBehavior = "ask" | "never";
@@ -34,7 +34,12 @@ export function createDefaultSettings(): ConcordanceSettings {
   };
 }
 
-const LIST_KEYS = new Set<keyof ConcordanceSettings>(["excludedFolders", "excludedFilenameTerms"]);
+function parseLines(value: string): string[] {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
 
 export class ConcordanceSettingTab extends PluginSettingTab {
   constructor(
@@ -44,152 +49,135 @@ export class ConcordanceSettingTab extends PluginSettingTab {
     super(app, plugin);
   }
 
-  getSettingDefinitions(): SettingDefinitionItem[] {
-    return [
-      {
-        type: "group",
-        heading: "Prefix mode defaults",
-        items: [
-          {
-            name: "Index note filename template",
-            desc: "Identifies prefix-mode index notes. Must include {PREFIX} and {DISPLAY_NAME}.",
-            control: {
-              type: "text",
-              key: "indexFilenameTemplate",
-              placeholder: DEFAULT_SETTINGS.indexFilenameTemplate,
-            },
-          },
-          {
-            name: "Child note filename prefix template",
-            desc: "Finds prefix-mode child notes. Use {PREFIX} for the captured prefix.",
-            control: {
-              type: "text",
-              key: "childFilenamePrefixTemplate",
-              placeholder: DEFAULT_SETTINGS.childFilenamePrefixTemplate,
-            },
-          },
-        ],
-      },
-      {
-        type: "group",
-        heading: "Generated block markers",
-        items: [
-          {
-            name: "Start marker",
-            desc: 'Marks the start of plugin-owned content. Supports options like mode="folder".',
-            control: {
-              type: "text",
-              key: "startMarker",
-              placeholder: DEFAULT_SETTINGS.startMarker,
-            },
-          },
-          {
-            name: "End marker",
-            desc: "Marks the end of plugin-owned content. Content outside markers is never changed.",
-            control: {
-              type: "text",
-              key: "endMarker",
-              placeholder: DEFAULT_SETTINGS.endMarker,
-            },
-          },
-          {
-            name: "Missing-block heading",
-            desc: "Heading inserted before a newly added generated block.",
-            control: {
-              type: "text",
-              key: "autoIndexHeading",
-              placeholder: DEFAULT_SETTINGS.autoIndexHeading,
-            },
-          },
-          {
-            name: "Missing auto-index blocks",
-            desc: "Controls what happens when an index note has no Concordance markers.",
-            control: {
-              type: "dropdown",
-              key: "missingBlockBehavior",
-              options: {
-                ask: "Ask before adding",
-                never: "Never add automatically",
-              },
-            },
-          },
-        ],
-      },
-      {
-        type: "group",
-        heading: "Global exclusions",
-        items: [
-          {
-            name: "Excluded folders",
-            desc: "Skip notes inside these vault-relative folders. One folder per line.",
-            control: {
-              type: "textarea",
-              key: "excludedFolders",
-              rows: 6,
-              placeholder: "Archive\nTemplates\nPrivate/Notes",
-            },
-          },
-          {
-            name: "Excluded note name terms",
-            desc: "Skip notes whose file name contains these plain-text terms. One term per line.",
-            control: {
-              type: "textarea",
-              key: "excludedFilenameTerms",
-              rows: 6,
-              placeholder: "Draft\nWIP\nArchive\n_template",
-            },
-          },
-        ],
-      },
-      {
-        type: "group",
-        heading: "Maintenance",
-        items: [
-          {
-            name: "Reset settings",
-            desc: "Restore Concordance defaults.",
-            render: (setting) => {
-              setting.addButton((button) => {
-                button.setButtonText("Reset").onClick(async () => {
-                  this.plugin.settings = createDefaultSettings();
-                  await this.plugin.saveSettings();
-                  new Notice("Concordance settings reset to defaults.");
-                  this.update();
-                });
-              });
-            },
-          },
-        ],
-      },
-    ];
+  display(): void {
+    const { containerEl } = this;
+    containerEl.empty();
+
+    new Setting(containerEl).setName("Prefix mode defaults").setHeading();
+
+    new Setting(containerEl)
+      .setName("Index note filename template")
+      .setDesc("Identifies prefix-mode index notes. Must include {PREFIX} and {DISPLAY_NAME}.")
+      .addText((text) =>
+        text
+          .setPlaceholder(DEFAULT_SETTINGS.indexFilenameTemplate)
+          .setValue(this.plugin.settings.indexFilenameTemplate)
+          .onChange(async (value) => {
+            this.plugin.settings.indexFilenameTemplate = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Child note filename prefix template")
+      .setDesc("Finds prefix-mode child notes. Use {PREFIX} for the captured prefix.")
+      .addText((text) =>
+        text
+          .setPlaceholder(DEFAULT_SETTINGS.childFilenamePrefixTemplate)
+          .setValue(this.plugin.settings.childFilenamePrefixTemplate)
+          .onChange(async (value) => {
+            this.plugin.settings.childFilenamePrefixTemplate = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl).setName("Generated block markers").setHeading();
+
+    new Setting(containerEl)
+      .setName("Start marker")
+      .setDesc('Marks the start of plugin-owned content. Supports options like mode="folder".')
+      .addText((text) =>
+        text
+          .setPlaceholder(DEFAULT_SETTINGS.startMarker)
+          .setValue(this.plugin.settings.startMarker)
+          .onChange(async (value) => {
+            this.plugin.settings.startMarker = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("End marker")
+      .setDesc("Marks the end of plugin-owned content. Content outside markers is never changed.")
+      .addText((text) =>
+        text
+          .setPlaceholder(DEFAULT_SETTINGS.endMarker)
+          .setValue(this.plugin.settings.endMarker)
+          .onChange(async (value) => {
+            this.plugin.settings.endMarker = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Missing-block heading")
+      .setDesc("Heading inserted before a newly added generated block.")
+      .addText((text) =>
+        text
+          .setPlaceholder(DEFAULT_SETTINGS.autoIndexHeading)
+          .setValue(this.plugin.settings.autoIndexHeading)
+          .onChange(async (value) => {
+            this.plugin.settings.autoIndexHeading = value.trim();
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl)
+      .setName("Missing auto-index blocks")
+      .setDesc("Controls what happens when an index note has no Concordance markers.")
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOption("ask", "Ask before adding")
+          .addOption("never", "Never add automatically")
+          .setValue(this.plugin.settings.missingBlockBehavior)
+          .onChange(async (value) => {
+            this.plugin.settings.missingBlockBehavior = value as MissingBlockBehavior;
+            await this.plugin.saveSettings();
+          }),
+      );
+
+    new Setting(containerEl).setName("Global exclusions").setHeading();
+
+    new Setting(containerEl)
+      .setName("Excluded folders")
+      .setDesc("Skip notes inside these vault-relative folders. One folder per line.")
+      .addTextArea((textArea) => {
+        textArea
+          .setPlaceholder("Archive\nTemplates\nPrivate/Notes")
+          .setValue(this.plugin.settings.excludedFolders.join("\n"))
+          .onChange(async (value) => {
+            this.plugin.settings.excludedFolders = parseLines(value);
+            await this.plugin.saveSettings();
+          });
+        textArea.inputEl.rows = 6;
+      });
+
+    new Setting(containerEl)
+      .setName("Excluded note name terms")
+      .setDesc("Skip notes whose file name contains these plain-text terms. One term per line.")
+      .addTextArea((textArea) => {
+        textArea
+          .setPlaceholder("Draft\nWIP\nArchive\n_template")
+          .setValue(this.plugin.settings.excludedFilenameTerms.join("\n"))
+          .onChange(async (value) => {
+            this.plugin.settings.excludedFilenameTerms = parseLines(value);
+            await this.plugin.saveSettings();
+          });
+        textArea.inputEl.rows = 6;
+      });
+
+    new Setting(containerEl).setName("Maintenance").setHeading();
+
+    new Setting(containerEl)
+      .setName("Reset settings")
+      .setDesc("Restore Concordance defaults.")
+      .addButton((button) =>
+        button.setButtonText("Reset").onClick(async () => {
+          this.plugin.settings = createDefaultSettings();
+          await this.plugin.saveSettings();
+          new Notice("Concordance settings reset to defaults.");
+          this.display();
+        }),
+      );
   }
-
-  getControlValue(key: string): unknown {
-    if (isListKey(key)) {
-      return this.plugin.settings[key].join("\n");
-    }
-
-    const settings = this.plugin.settings as unknown as Record<string, unknown>;
-    return settings[key];
-  }
-
-  async setControlValue(key: string, value: unknown): Promise<void> {
-    if (isListKey(key)) {
-      const text = typeof value === "string" ? value : "";
-      this.plugin.settings[key] = text
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line.length > 0);
-      await this.plugin.saveSettings();
-      return;
-    }
-
-    const settings = this.plugin.settings as unknown as Record<string, unknown>;
-    settings[key] = typeof value === "string" ? value.trim() : value;
-    await this.plugin.saveSettings();
-  }
-}
-
-function isListKey(key: string): key is "excludedFolders" | "excludedFilenameTerms" {
-  return LIST_KEYS.has(key as keyof ConcordanceSettings);
 }

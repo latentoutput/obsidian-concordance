@@ -23,7 +23,7 @@ src/                 TypeScript source bundled into main.js by esbuild
   indexing.ts        Index-detection and update-plan generation
   main.ts            Plugin entry point and command wiring
   modals.ts          Confirmation / diff modals
-  settings.ts        Declarative settings tab
+  settings.ts        Settings tab
   ui.ts              Shared DOM helpers
   types.ts           Shared types
 .github/workflows/   Release workflow with artifact attestations
