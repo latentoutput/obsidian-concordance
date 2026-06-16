@@ -15,6 +15,22 @@ npm run lint         # eslint
 npm run qa           # typecheck + lint + tests + format + build + audit (production deps only)
 ```
 
+## Manual testing in Obsidian
+
+Automated tests cover the indexing logic but not the runtime integration
+with Obsidian. Before cutting a release, install the build into a real
+vault and exercise the commands:
+
+```sh
+make install-local VAULT=/path/to/test-vault
+```
+
+This builds the plugin and copies `main.js`, `manifest.json`, and
+`styles.css` into the vault's `.obsidian/plugins/concordance/`. Reload
+Obsidian (or toggle the plugin) and verify the settings tab renders, the
+"Update current index" / "Update all indexes" / "Check indexes for
+updates" commands behave correctly, and changes persist across reloads.
+
 ## Project layout
 
 ```text
@@ -44,8 +60,11 @@ make release-minor       # new features:  0.1.0 → 0.2.0
 make release-major       # breaking:      0.1.0 → 1.0.0
 ```
 
-Each combined target bumps the version, runs the full QA suite, tags, and
-pushes. If QA fails, the release stops before the tag is pushed.
+Each combined target bumps the version, runs the full QA suite, compares
+`minAppVersion` against the current Obsidian stable release, prints a
+manual-test checklist, prompts for confirmation, then tags and pushes. If
+QA fails or you decline the prompt, the release stops before the tag is
+pushed.
 
 For the very first release (where the bump is already in `manifest.json`),
 or to re-release the current version without a bump, run just:
