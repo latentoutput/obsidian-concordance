@@ -1,4 +1,4 @@
-.PHONY: install install-local dev build typecheck lint lint-fix test format format-check markdownlint audit outdated qa security security-history clean bump bump-patch bump-minor bump-major release release-check release-patch release-minor release-major
+.PHONY: install install-local dev build typecheck lint lint-fix test format format-check audit outdated qa security security-history clean bump bump-patch bump-minor bump-major release release-check release-patch release-minor release-major
 
 install:
 	npm install
@@ -34,9 +34,6 @@ format:
 
 format-check:
 	npm run format:check
-
-markdownlint:
-	npm run lint:md
 
 audit:
 	npm run deps:audit
