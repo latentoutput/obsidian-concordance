@@ -98,8 +98,8 @@ make release
 **`release`**:
 
 1. Runs the full local `qa` suite (typecheck + lint + tests + format check +
-   markdown lint + production build + dependency audit). If anything fails,
-   the tag is not pushed.
+   production build + dependency audit). If anything fails, the tag is not
+   pushed.
 2. Tags the current `manifest.json` version if it isn't already tagged
    (covers the first-release case).
 3. Pushes commits and tags to `origin`.
