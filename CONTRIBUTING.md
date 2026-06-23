@@ -44,11 +44,50 @@ src/                 TypeScript source bundled into main.js by esbuild
   types.ts           Shared types
 .github/workflows/   Release workflow with artifact attestations
 docs/screenshots/    README screenshots
-scripts/             Local QA / security helpers
+scripts/             Local QA / security / compatibility helpers
 ```
 
 The bundled `main.js` is the only runtime asset that ships to users —
 alongside `manifest.json` and `styles.css`.
+
+## Obsidian API compatibility
+
+`manifest.json`'s `minAppVersion` is the oldest Obsidian build a user can
+install this plugin on. The convention in the ecosystem is to set it to
+the lowest version that has every API you actually use, not to keep it in
+lockstep with current stable — most community plugins drift years behind
+stable, which is normal and fine.
+
+A check verifies the declared floor is honest:
+
+```sh
+npm run check:min-app-version
+```
+
+The script walks `src/` for named imports from `"obsidian"`, looks each
+symbol up in `scripts/obsidian-api-versions.json` (a hand-curated table
+mapping `symbol → introduction version`), takes the max, and compares it
+against `manifest.json`'s `minAppVersion`. Three outcomes:
+
+- **Pass.** Declared floor is at or above the honest floor; nothing to do.
+- **Below floor (exit 1).** A symbol you import requires a newer build
+  than `minAppVersion` claims. Raise `minAppVersion` in `manifest.json`
+  to the printed value.
+- **Unknown symbol (exit 2).** You imported something not in the table.
+  Look up its introduction version in the Obsidian changelog and add the
+  entry to `scripts/obsidian-api-versions.json`.
+
+The same check runs in CI via `.github/workflows/obsidian-watch.yml` on
+pushes to `main`, on PRs that touch `src/`, `manifest.json`, or the
+table, and weekly as a fallback. PR failures show up as a red X; push
+and cron failures open an issue.
+
+**Caveat:** the check is symbol-level. Signature changes to existing
+APIs, behavioral changes, and event-name strings don't trigger it — when
+you touch something subtle, still test it. The release-time heads-up
+about Obsidian stable (see below) is the other half of compatibility
+hygiene: it reminds you to test against the build most users actually
+run, not just the Catalyst insider track.
 
 ## Cutting a release
 

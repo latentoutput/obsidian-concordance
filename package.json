@@ -16,6 +16,7 @@
     "format:check": "prettier --check \"**/*.{css,js,json,jsonc,mjs,ts,yaml,yml}\"",
     "deps:audit": "npm audit --audit-level=moderate --omit=dev",
     "deps:outdated": "npm outdated",
+    "check:min-app-version": "node scripts/check-min-app-version.mjs",
     "qa": "scripts/local-qa.sh",
     "security": "scripts/local-security.sh",
     "version": "node version-bump.mjs && git add manifest.json versions.json"

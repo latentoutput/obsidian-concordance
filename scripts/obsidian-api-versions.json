@@ -1,0 +1,15 @@
+{
+  "App": "1.0.0",
+  "CachedMetadata": "1.0.0",
+  "FrontMatterCache": "1.0.0",
+  "MetadataCache": "1.0.0",
+  "Modal": "1.0.0",
+  "Notice": "1.0.0",
+  "Plugin": "1.0.0",
+  "PluginSettingTab": "1.0.0",
+  "Setting": "1.0.0",
+  "TagCache": "1.0.0",
+  "TFile": "1.0.0",
+  "Vault": "1.0.0",
+  "setIcon": "1.0.0"
+}

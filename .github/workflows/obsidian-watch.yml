@@ -1,6 +1,20 @@
-name: Obsidian stable watch
+name: Obsidian API floor check
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "manifest.json"
+      - "scripts/obsidian-api-versions.json"
+      - "scripts/check-min-app-version.mjs"
+      - ".github/workflows/obsidian-watch.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "manifest.json"
+      - "scripts/obsidian-api-versions.json"
+      - "scripts/check-min-app-version.mjs"
   schedule:
     - cron: "0 14 * * 1"
   workflow_dispatch:
@@ -10,44 +24,56 @@ permissions:
   issues: write
 
 jobs:
-  watch:
+  check:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
         uses: actions/checkout@v7
 
-      - name: Compare Obsidian stable to minAppVersion
+      - name: Compare manifest.json minAppVersion against imports
+        id: check
+        run: |
+          set +e
+          node scripts/check-min-app-version.mjs > /tmp/floor-check.txt 2>&1
+          STATUS=$?
+          set -e
+          cat /tmp/floor-check.txt
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+
+      - name: Fail PRs on a bad floor
+        if: github.event_name == 'pull_request' && steps.check.outputs.status != '0'
+        run: exit 1
+
+      - name: Open issue on failure
+        if: >-
+          github.event_name != 'pull_request' &&
+          steps.check.outputs.status != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DESKTOP_RELEASES_URL: https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/desktop-releases.json
         run: |
           set -euo pipefail
 
-          LATEST=$(curl -fsSL "$DESKTOP_RELEASES_URL" | jq -r '.latestVersion')
-          MIN=$(node -p "require('./manifest.json').minAppVersion")
-
-          if ! printf '%s' "$LATEST" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
-            echo "Unexpected latestVersion from desktop-releases.json: $LATEST" >&2
-            exit 1
+          STATUS="${{ steps.check.outputs.status }}"
+          if [ "$STATUS" = "1" ]; then
+            TITLE="minAppVersion is below the honest floor for current imports"
+          else
+            TITLE="Obsidian API floor check: unknown symbols in source"
           fi
 
-          echo "Stable Obsidian: $LATEST"
-          echo "Plugin minAppVersion: $MIN"
-
-          HIGHER=$(printf '%s\n%s\n' "$LATEST" "$MIN" | sort -V | tail -1)
-          if [ "$HIGHER" = "$MIN" ]; then
-            echo "Plugin minAppVersion is at or above latest stable; nothing to do."
-            exit 0
-          fi
-
-          TITLE="Obsidian stable is at $LATEST (minAppVersion is $MIN)"
-
-          EXISTING=$(gh issue list --state all --search "\"$TITLE\" in:title" --json number --jq 'length')
+          EXISTING=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq 'length')
           if [ "$EXISTING" -gt 0 ]; then
-            echo "An issue with this exact title already exists (open or closed); skipping."
+            echo "Open issue with this title already exists; skipping."
             exit 0
           fi
 
-          gh issue create \
-            --title "$TITLE" \
-            --body "Stable Obsidian is at **$LATEST**; this plugin's minAppVersion is **$MIN**. Decide whether to raise the floor in manifest.json and pin the obsidian devDep in lockstep, or close this issue to acknowledge and stay on $MIN."
+          {
+            echo "The Obsidian API floor check failed. Output:"
+            echo
+            echo '```'
+            cat /tmp/floor-check.txt
+            echo '```'
+            echo
+            echo "See \`scripts/check-min-app-version.mjs\` and \`scripts/obsidian-api-versions.json\`."
+          } > /tmp/issue-body.md
+
+          gh issue create --title "$TITLE" --body-file /tmp/issue-body.md
