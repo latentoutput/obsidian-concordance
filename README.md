@@ -10,11 +10,11 @@ one file.
 ## Features
 
 - **Four ways to scope an index** in a single plugin:
-  - `prefix` — files whose name starts with a configurable template (default
+  - `prefix`: files whose name starts with a configurable template (default
     `{PREFIX} -` plus a space)
-  - `folder` — files inside a folder (optionally recursive)
-  - `tag` — files carrying a tag (inline or frontmatter)
-  - `property` — files whose frontmatter property equals a given value
+  - `folder`: files inside a folder (optionally recursive)
+  - `tag`: files carrying a tag (inline or frontmatter)
+  - `property`: files whose frontmatter property equals a given value
 - **Safe, contained edits.** Only the content between `%% concordance:start %%`
   and `%% concordance:end %%` is rewritten. Headings, notes, and other prose
   outside the block are left alone.
@@ -29,24 +29,24 @@ one file.
 ## Screenshots
 
 A Concordance-managed index file. The list inside the `%% concordance %%`
-markers is regenerated each run; everything outside is yours.
+markers is regenerated each run. Everything outside is yours.
 
 ![A Concordance-managed index note, with curated prose above and below the auto-generated wikilink list](docs/screenshots/hero.png)
 
-The update modal shows exactly what will change — links added, removed, and
-unchanged — before any file is written to disk.
+The update modal shows exactly what will change (links added, removed, and
+unchanged) before any file is written to disk.
 
 ![The update confirmation modal, listing matched notes, added links, removed links, and unchanged links with expandable details](docs/screenshots/update_modal.png)
 
 Marker attributes drive non-prefix modes. Tag, folder, and frontmatter
-property indexes are all configured the same way — just by editing the
-options in the start marker.
+property indexes are all configured the same way, by editing the options in
+the start marker.
 
 ![A tag-mode index showing the mode and tag attributes in the start marker, populating a wikilink list of recipe notes](docs/screenshots/tag_mode.png)
 
 ## Installation
 
-### From the Community Plugins browser (after acceptance)
+### From the Community Plugins browser
 
 1. In Obsidian, open **Settings → Community plugins**.
 2. Disable Restricted mode if necessary.
@@ -103,9 +103,9 @@ Attributes are written inside the start marker as `key="value"` pairs.
 | `mode`              | all        | `prefix`, `folder`, `tag`, `property`     | `prefix`       |
 | `folder`            | `folder`   | vault-relative path (empty = whole vault) | _index folder_ |
 | `includeSubfolders` | `folder`   | `true`, `false`                           | `false`        |
-| `tag`               | `tag`      | `#tag` or `tag` (leading `#` added)       | —              |
-| `property`          | `property` | frontmatter key                           | —              |
-| `value`             | `property` | frontmatter value to match                | —              |
+| `tag`               | `tag`      | `#tag` or `tag` (leading `#` added)       | _none_         |
+| `property`          | `property` | frontmatter key                           | _none_         |
+| `value`             | `property` | frontmatter value to match                | _none_         |
 | `linkStyle`         | all        | `auto`, `name`, `path`                    | `auto`         |
 | `sort`              | all        | `name`, `path`                            | `path`         |
 
@@ -131,18 +131,18 @@ for subfolder matches so wikilinks resolve unambiguously.
 
 ## Settings
 
-- **Index note filename template** — pattern used to discover prefix-mode index
+- **Index note filename template**: pattern used to discover prefix-mode index
   notes. Must include `{PREFIX}` and `{DISPLAY_NAME}`.
-- **Child note filename prefix template** — what prefix-mode child notes start
+- **Child note filename prefix template**: what prefix-mode child notes start
   with. Must include `{PREFIX}`.
-- **Start / end markers** — the literal strings that delimit the managed block.
+- **Start / end markers**: the literal strings that delimit the managed block.
   The defaults use Obsidian's comment syntax so the markers do not render in
   preview mode.
-- **Missing-block heading** — heading inserted just above a newly added block.
-- **Missing-block behaviour** — `Ask` shows a confirmation modal before adding
-  a marker pair to an index that has none; `Never` silently skips such files.
-- **Excluded folders** — paths to skip in every mode.
-- **Excluded note name terms** — substrings to skip in every mode.
+- **Missing-block heading**: heading inserted just above a newly added block.
+- **Missing-block behaviour**: `Ask` shows a confirmation modal before adding
+  a marker pair to an index that has none. `Never` silently skips such files.
+- **Excluded folders**: paths to skip in every mode.
+- **Excluded note name terms**: substrings to skip in every mode.
 
 ## Safety model
 
@@ -160,7 +160,7 @@ for subfolder matches so wikilinks resolve unambiguously.
 - The plugin enumerates Markdown file paths in your vault via Obsidian's
   `vault.getMarkdownFiles()` to find candidate notes for an index.
 - For `tag` and `property` modes, it reads cached metadata (tags and
-  frontmatter) via Obsidian's `MetadataCache` — no extra file I/O.
+  frontmatter) via Obsidian's `MetadataCache`, with no extra file I/O.
 - The only file contents the plugin actually loads are the index files
   themselves, so it can locate the managed marker block.
 - The plugin makes **no network requests** and writes nothing outside the
@@ -180,4 +180,4 @@ maintainer.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE).

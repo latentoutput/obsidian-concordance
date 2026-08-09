@@ -4,11 +4,11 @@ This file is **optional curated release notes**. If a `## [version]` section
 exists when `make release` runs, those notes are published with the release.
 If no section exists, `gh release create --generate-notes` auto-generates
 notes from commits and PRs since the previous tag. Use this file when you
-want a hero summary (initial release, major versions, breaking changes);
-otherwise skip it and let autogen handle the routine releases.
+want a hero summary (initial release, major versions, breaking changes).
+Otherwise skip it and let autogen handle the routine releases.
 
-Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
-this project follows [Semantic Versioning](https://semver.org/).
+Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [0.1.2] - 2026-06-15
 
@@ -21,7 +21,7 @@ Broadens compatibility from Catalyst (1.13.1+) to stable Obsidian releases.
 - Settings tab reverted from Obsidian 1.13's Catalyst-only declarative
   `getSettingDefinitions()` API back to the standard imperative `display()`
   method. No user-visible behaviour change. The declarative API can be
-  re-adopted once it ships to stable; it coexists with `display()` so the
+  re-adopted once it ships to stable, and it coexists with `display()` so the
   migration is additive.
 - `obsidian` dev dependency pinned to `~1.8.7` so the API contract is
   enforced at compile time.

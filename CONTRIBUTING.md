@@ -47,15 +47,15 @@ docs/screenshots/    README screenshots
 scripts/             Local QA / security / compatibility helpers
 ```
 
-The bundled `main.js` is the only runtime asset that ships to users —
-alongside `manifest.json` and `styles.css`.
+The bundled `main.js` is the only runtime asset that ships to users, alongside
+`manifest.json` and `styles.css`.
 
 ## Obsidian API compatibility
 
 `manifest.json`'s `minAppVersion` is the oldest Obsidian build a user can
 install this plugin on. The convention in the ecosystem is to set it to
 the lowest version that has every API you actually use, not to keep it in
-lockstep with current stable — most community plugins drift years behind
+lockstep with current stable. Most community plugins drift years behind
 stable, which is normal and fine.
 
 A check verifies the declared floor is honest:
@@ -69,7 +69,7 @@ symbol up in `scripts/obsidian-api-versions.json` (a hand-curated table
 mapping `symbol → introduction version`), takes the max, and compares it
 against `manifest.json`'s `minAppVersion`. Three outcomes:
 
-- **Pass.** Declared floor is at or above the honest floor; nothing to do.
+- **Pass.** Declared floor is at or above the honest floor, so nothing to do.
 - **Below floor (exit 1).** A symbol you import requires a newer build
   than `minAppVersion` claims. Raise `minAppVersion` in `manifest.json`
   to the printed value.
@@ -79,11 +79,11 @@ against `manifest.json`'s `minAppVersion`. Three outcomes:
 
 The same check runs in CI via `.github/workflows/obsidian-watch.yml` on
 pushes to `main`, on PRs that touch `src/`, `manifest.json`, or the
-table, and weekly as a fallback. PR failures show up as a red X; push
+table, and weekly as a fallback. PR failures show up as a red X. Push
 and cron failures open an issue.
 
 **Caveat:** the check is symbol-level. Signature changes to existing
-APIs, behavioral changes, and event-name strings don't trigger it — when
+APIs, behavioral changes, and event-name strings don't trigger it, so when
 you touch something subtle, still test it. The release-time heads-up
 about Obsidian stable (see below) is the other half of compatibility
 hygiene: it reminds you to test against the build most users actually
@@ -131,7 +131,7 @@ make release
    - Appends a `{ newVersion → minAppVersion }` entry to `versions.json`
 3. Commits all three files in a single commit
 4. Creates a **bare semver tag** (e.g. `0.2.0`, never `v0.2.0`). Obsidian
-   requires bare tags; the bare form is enforced via `.npmrc`'s
+   requires bare tags, and the bare form is enforced via `.npmrc`'s
    `tag-version-prefix=""`.
 
 **`release`**:
@@ -150,15 +150,15 @@ The push triggers the `release.yml` GitHub Actions workflow, which:
 - Verifies that `manifest.json`'s version matches the pushed tag
 - **Generates GitHub artifact attestations** for `main.js`, `manifest.json`,
   and `styles.css` (cryptographic provenance proving the assets were built
-  from the source repository at this commit; users and reviewers can verify
-  with `gh attestation verify`)
+  from the source repository at this commit, which users and reviewers can
+  verify with `gh attestation verify`)
 - Creates the GitHub release, attaching the three assets and using
   `CHANGELOG.md`'s `## [<version>]` section if present, otherwise
   auto-generated notes from commits since the previous tag
 
 The three files attached to the release (`main.js`, `manifest.json`,
 `styles.css`) are exactly what Obsidian's community-plugin reviewer
-downloads. **Do not** attach the source archive — only the bundled `main.js`
+downloads. **Do not** attach the source archive. Only the bundled `main.js`
 runs in users' vaults.
 
 Tail the release workflow after pushing with `gh run watch --exit-status`.
