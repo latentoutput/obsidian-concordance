@@ -9,12 +9,12 @@ updates:
       dev-dependencies:
         patterns:
           - "*"
-        # obsidian is pinned to ~1.8.7 to enforce the minAppVersion API
-        # contract. Keep it out of the bulk group so a new npm types
-        # release surfaces as its own PR — a notification that the
-        # Obsidian API has moved, not a PR to merge casually. Treat it as
-        # "decide whether to raise minAppVersion in lockstep," then merge
-        # or close.
+        # The minAppVersion contract is enforced by scripts/check-api-floor.mjs,
+        # which typechecks src/ against the typings matching manifest.json's
+        # floor rather than whatever is installed. So bumping these types is
+        # safe on its own: the check fails only when the code actually uses an
+        # API newer than the floor, which is when the decision is real.
+        # obsidian still gets its own PR so an API move stays visible.
         exclude-patterns:
           - "obsidian"
 
