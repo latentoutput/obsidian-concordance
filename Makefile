@@ -26,10 +26,14 @@ help:
 install:
 	npm install
 
+# A leading ~ survives as a literal through make into the quoted shell tests
+# below, so expand it here rather than reporting a real vault as missing.
+VAULT_PATH := $(patsubst ~/%,$(HOME)/%,$(patsubst ~,$(HOME),$(VAULT)))
+
 install-local: build
 	@if [ -z "$(VAULT)" ]; then echo "Usage: make install-local VAULT=/path/to/vault" >&2; exit 1; fi
-	@if [ ! -d "$(VAULT)/.obsidian" ]; then echo "$(VAULT) doesn't look like an Obsidian vault (no .obsidian/)" >&2; exit 1; fi
-	@PLUGIN_DIR="$(VAULT)/.obsidian/plugins/concordance"; \
+	@if [ ! -d "$(VAULT_PATH)/.obsidian" ]; then echo "$(VAULT_PATH) doesn't look like an Obsidian vault (no .obsidian/)" >&2; exit 1; fi
+	@PLUGIN_DIR="$(VAULT_PATH)/.obsidian/plugins/concordance"; \
 	  mkdir -p "$$PLUGIN_DIR"; \
 	  cp main.js manifest.json styles.css "$$PLUGIN_DIR/"; \
 	  echo "Installed Concordance into $$PLUGIN_DIR. Reload Obsidian or toggle the plugin to pick up the build."
