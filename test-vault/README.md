@@ -25,3 +25,21 @@ capture what Obsidian itself generates. It saves both link settings up front and
 restores them in a `finally` block.
 
 Findings are written up in `docs/link-resolution.md`.
+
+## Running the settings probe
+
+`settings-probe.js` checks the parts of the settings tab that unit tests cannot
+reach, by driving the live plugin inside Obsidian. Install the current build,
+reload the plugin, then run it:
+
+    make install-local VAULT=test-vault
+    obsidian plugin:reload id=concordance
+    obsidian eval code="$(cat test-vault/settings-probe.js)"
+
+It asserts that the plugin loads, that `getSettingDefinitions()` produces the
+expected groups, that every stored setting has a control, that values round
+trip through storage and reach `data.json`, and that each setting is findable
+in Obsidian's settings search. It restores whatever it changed in a `finally`
+block and prints `ALL PASS` or a count of failures.
+
+This is what caught the child prefix template losing its trailing space.

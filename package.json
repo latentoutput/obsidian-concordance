@@ -13,6 +13,7 @@
     "lint:fix": "eslint . --fix",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "format": "prettier --write \"**/*.{css,js,json,jsonc,mjs,ts,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{css,js,json,jsonc,mjs,ts,yaml,yml}\"",
     "deps:audit": "npm audit --audit-level=moderate --omit=dev",
@@ -30,6 +31,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "@vitest/coverage-v8": "^4.1.11",
     "esbuild": "^0.28.2",
     "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
