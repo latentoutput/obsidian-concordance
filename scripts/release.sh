@@ -10,13 +10,73 @@ set -euo pipefail
 
 BUMP="${1:-}"
 DRY=""
-[ "${2:-}" = "--dry-run" ] && DRY=1
+for a in "$@"; do [ "$a" = "--dry-run" ] && DRY=1; done
+[ "$BUMP" = "--dry-run" ] && BUMP=""
 
 case "$BUMP" in
-  patch|minor|major) ;;
+  ""|patch|minor|major) ;;
   [0-9]*.[0-9]*.[0-9]*) ;;
-  *) echo "usage: $0 patch|minor|major|X.Y.Z [--dry-run]" >&2; exit 64 ;;
+  *) echo "usage: $0 [patch|minor|major|X.Y.Z] [--dry-run]" >&2; exit 64 ;;
 esac
+
+# Look at what actually changed since the last tag and propose a bump. Semver
+# encodes intent, which only a human has, so this proposes and explains rather
+# than deciding silently.
+propose_bump() {
+  local last subjects bodies shipped
+  last=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+  if [ -z "$last" ]; then
+    echo "patch|no previous tag to compare against"
+    return
+  fi
+
+  # Only trust explicit declarations. Guessing intent from English prose
+  # misfires (a body line starting with "Adds" is not a feature), so anything
+  # undeclared falls back to patch and you override if it is wrong.
+  subjects=$(git log --format=%s "$last"..HEAD 2>/dev/null || echo "")
+  bodies=$(git log --format=%b "$last"..HEAD 2>/dev/null || echo "")
+  shipped=$(git diff --name-only "$last"..HEAD -- src/ styles.css 2>/dev/null)
+
+  if printf '%s' "$bodies" | grep -q 'BREAKING CHANGE' \
+     || printf '%s' "$subjects" | grep -qE '^[a-z]+(\(.+\))?!:'; then
+    echo "major|a commit declares a breaking change"
+  elif printf '%s' "$subjects" | grep -qE '^feat(\(.+\))?:'; then
+    echo "minor|a commit is prefixed feat:"
+  elif [ -z "$shipped" ]; then
+    echo "patch|nothing under src/ or styles.css changed, so users see no behaviour change"
+  else
+    echo "patch|src/ changed but no commit declared a feature or breaking change"
+  fi
+}
+
+if [ -z "$BUMP" ]; then
+  LAST=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+  printf '\n==> Changes since %s\n\n' "${LAST:-the beginning}"
+  if [ -n "$LAST" ]; then
+    git log --format='  %s' "$LAST"..HEAD | head -20
+    SHIPPED=$(git diff --name-only "$LAST"..HEAD -- src/ styles.css 2>/dev/null)
+    if [ -n "$SHIPPED" ]; then
+      printf '\n  files that reach users:\n'
+      printf '%s\n' "$SHIPPED" | sed 's/^/    /'
+    else
+      printf '\n  files that reach users: none, this release ships no behaviour change\n'
+    fi
+  fi
+  SUGGESTION=$(propose_bump)
+  BUMP="${SUGGESTION%%|*}"
+  WHY="${SUGGESTION#*|}"
+  printf '\n  Suggested: %s (%s)\n' "$BUMP" "$WHY"
+  OTHERS=$(printf 'patch minor major' | tr ' ' '\n' | grep -v "^$BUMP$" | tr '\n' '/' | sed 's:/$::')
+  printf '\n  Intent cannot be read from commit prose, so override if this is wrong.\n'
+  printf '\nBump [%s] or %s or X.Y.Z, Enter to accept: ' "$BUMP" "$OTHERS"
+  read -r CHOICE
+  case "$CHOICE" in
+    "") ;;
+    patch|minor|major) BUMP="$CHOICE" ;;
+    [0-9]*.[0-9]*.[0-9]*) BUMP="$CHOICE" ;;
+    *) echo "unrecognised bump: $CHOICE" >&2; exit 64 ;;
+  esac
+fi
 
 run() {
   if [ -n "$DRY" ]; then printf '  would run: %s\n' "$*"; else "$@"; fi

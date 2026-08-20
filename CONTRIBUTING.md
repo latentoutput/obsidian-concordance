@@ -141,39 +141,64 @@ workflow run needs your approval before it starts, which is deliberate:
 One command, from a clean `main`:
 
 ```sh
-make release-patch       # bug fixes:     0.1.2 -> 0.1.3
-make release-minor       # new features:  0.1.2 -> 0.2.0
-make release-major       # breaking:      0.1.2 -> 1.0.0
+make release
+```
+
+It lists what changed since the last tag, shows which of those files actually
+reach users, suggests a bump with its reasoning, and asks. Press Enter to
+accept.
+
+The suggestion only trusts explicit signals, because intent cannot be read out
+of commit prose:
+
+- **major** when a subject uses a `!:` marker (`refactor!: drop prefix mode`)
+  or a body carries a `BREAKING CHANGE` trailer
+- **minor** when a subject is prefixed `feat:` or `feat(scope):`
+- **patch** otherwise, including when nothing under `src/` or `styles.css`
+  changed at all
+
+That last case is common here. Infrastructure, docs and CI work never reach
+`main.js`, so a release containing only those ships no behaviour change.
+
+Deliberately conservative: an undeclared feature is suggested as a patch, and
+you override at the prompt. If you already know the answer, skip the question:
+
+```sh
+make release-patch
+make release-minor
+make release-major
 make release-version VERSION=0.4.2
 ```
 
 Add `DRY=1` to any of them to print the steps without touching anything:
 
 ```sh
-make release-patch DRY=1
+make release DRY=1
 ```
 
 Because `main` requires a PR, the version bump cannot be pushed straight to
 it. `scripts/release.sh` drives the whole sequence instead:
 
-1. **Preflight.** Refuses unless you are on `main`, the tree is clean, and
+1. **Bump selection.** Analyses commits since the last tag and asks, unless you
+   named the bump on the command line.
+2. **Preflight.** Refuses unless you are on `main`, the tree is clean, and
    local `main` matches `origin/main`.
-2. **Quality gate.** Runs the full `qa` suite. Nothing proceeds if it fails.
-3. **Stable heads-up.** Compares `minAppVersion` against the current Obsidian
+3. **Quality gate.** Runs the full `qa` suite. Nothing proceeds if it fails.
+4. **Stable heads-up.** Compares `minAppVersion` against the current Obsidian
    stable release, so you know whether you are testing on the build most
    users actually run.
-4. **Bump.** `npm version <bump> --no-git-tag-version` updates `package.json`,
+5. **Bump.** `npm version <bump> --no-git-tag-version` updates `package.json`,
    and the `version` script updates `manifest.json` and appends a
    `{ version -> minAppVersion }` entry to `versions.json`. No commit, no tag
    yet.
-5. **Manual test prompt.** Asks whether you have installed the build in a real
+6. **Manual test prompt.** Asks whether you have installed the build in a real
    vault and exercised the commands. Answering no aborts and tells you how to
    revert the bump. Automated tests do not touch Obsidian, so this is the only
    thing standing between a broken build and your users.
-6. **PR.** Commits the four files on a `release/X.Y.Z` branch, pushes, opens
+7. **PR.** Commits the four files on a `release/X.Y.Z` branch, pushes, opens
    the PR, and enables auto-merge.
-7. **Wait.** Watches CI, then waits for the merge.
-8. **Tag.** Returns to `main`, pulls, and pushes a bare semver tag (`0.1.3`,
+8. **Wait.** Watches CI, then waits for the merge.
+9. **Tag.** Returns to `main`, pulls, and pushes a bare semver tag (`0.1.3`,
    never `v0.1.3`). Obsidian requires bare tags, enforced by `.npmrc`'s
    `tag-version-prefix=""`.
 

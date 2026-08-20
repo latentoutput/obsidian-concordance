@@ -9,11 +9,12 @@ help:
 	@echo "    make install-local VAULT=~/path/to/vault   build and install for manual testing"
 	@echo ""
 	@echo "  Releasing (main requires a PR, this drives the whole flow)"
-	@echo "    make release-patch   bug fixes     0.1.2 -> 0.1.3"
-	@echo "    make release-minor   new features  0.1.2 -> 0.2.0"
-	@echo "    make release-major   breaking      0.1.2 -> 1.0.0"
-	@echo "    make release-version VERSION=0.4.2"
+	@echo "    make release         looks at what changed, suggests the bump, asks"
 	@echo "    add DRY=1 to preview without changing anything"
+	@echo ""
+	@echo "    If you already know the bump, skip the question:"
+	@echo "      make release-patch | release-minor | release-major"
+	@echo "      make release-version VERSION=0.4.2"
 	@echo ""
 	@echo "  Checks"
 	@echo "    make typecheck lint test format-check audit"
@@ -109,11 +110,7 @@ release-check:
 	  fi
 
 release:
-	@echo "main requires a PR, so releases go through scripts/release.sh."
-	@echo "Use: make release-patch | release-minor | release-major"
-	@echo "Or:  make release-version VERSION=0.4.2"
-	@echo "Add DRY=1 to any of them to see the steps without doing them."
-	@exit 64
+	@scripts/release.sh $(if $(DRY),--dry-run)
 
 release-patch:
 	@scripts/release.sh patch $(if $(DRY),--dry-run)
