@@ -9,6 +9,7 @@ data.json
 
 # Tooling state
 .claude/
+CLAUDE.md
 .eslintcache
 .npm/
 
