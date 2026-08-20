@@ -3,7 +3,8 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: ["main.js", "node_modules/**"],
+    // test-vault is fixture data, including any plugin build installed into it
+    ignores: ["main.js", "node_modules/**", "test-vault/**"],
   },
   ...tseslint.configs.recommended,
   eslintConfigPrettier,
