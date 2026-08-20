@@ -1,6 +1,12 @@
 import type { ConcordanceSettings } from "./settings";
 import type { LinkStats } from "./types";
 
+export interface WikilinkEntry {
+  target: string;
+  subpath: string;
+  alias: string | null;
+}
+
 export interface IndexBlockConfig {
   mode: "prefix" | "folder" | "tag" | "property";
   folder: string | null;
@@ -29,8 +35,13 @@ export function buildGeneratedBlock(
   linkTargets: string[],
   settings: ConcordanceSettings,
   startMarker = settings.startMarker,
+  preserved: ReadonlyMap<string, WikilinkEntry> = new Map(),
 ): string {
-  const links = linkTargets.map((target) => `- [[${target}]]`);
+  const links = linkTargets.map((target) => {
+    const kept = preserved.get(target);
+    const alias = kept?.alias == null ? "" : `|${kept.alias}`;
+    return `- [[${target}${kept?.subpath ?? ""}${alias}]]`;
+  });
 
   if (links.length === 0) {
     return `${startMarker}\n${settings.endMarker}`;
@@ -134,22 +145,48 @@ export function countOccurrences(content: string, search: string): number {
   return count;
 }
 
-export function extractWikilinkTargets(content: string): string[] {
-  const targets: string[] = [];
-  const linkPattern = /^-\s+\[\[([^\]|#]+)(?:[#|][^\]]*)?\]\]/gm;
+export function extractWikilinkEntries(content: string): WikilinkEntry[] {
+  const entries: WikilinkEntry[] = [];
+  const linkPattern = /^-\s+\[\[([^\]|#]+)(#[^\]|]*)?(?:\|([^\]]*))?\]\]/gm;
   let match = linkPattern.exec(content);
 
   while (match) {
     const target = match[1]?.trim();
 
     if (target) {
-      targets.push(target);
+      entries.push({ target, subpath: match[2] ?? "", alias: match[3] ?? null });
     }
 
     match = linkPattern.exec(content);
   }
 
-  return targets;
+  return entries;
+}
+
+export function extractWikilinkTargets(content: string): string[] {
+  return extractWikilinkEntries(content).map((entry) => entry.target);
+}
+
+/**
+ * Aliases and subpaths are hand-added by users inside the generated block.
+ * Carry them across regeneration so rewriting the block does not discard them.
+ */
+export function collectPreservedLinkParts(
+  existingBlock: string | null,
+): Map<string, WikilinkEntry> {
+  const preserved = new Map<string, WikilinkEntry>();
+
+  if (!existingBlock) {
+    return preserved;
+  }
+
+  for (const entry of extractWikilinkEntries(existingBlock)) {
+    if ((entry.alias !== null || entry.subpath !== "") && !preserved.has(entry.target)) {
+      preserved.set(entry.target, entry);
+    }
+  }
+
+  return preserved;
 }
 
 export function getLinkStats(existingLinks: string[], generatedLinks: string[]): LinkStats {
@@ -163,13 +200,37 @@ export function getLinkStats(existingLinks: string[], generatedLinks: string[]):
   };
 }
 
+/**
+ * Derive an attribute-aware pattern from any configured marker that closes with
+ * `%%`, so custom markers accept attributes the same way the default one does.
+ * Returns null for marker shapes we cannot split, leaving the literal fallback.
+ */
+function buildStartMarkerPattern(configuredStartMarker: string): RegExp | null {
+  const trimmed = configuredStartMarker.trimEnd();
+
+  if (!trimmed.endsWith("%%")) {
+    return null;
+  }
+
+  const prefix = trimmed.slice(0, -2).trimEnd();
+
+  if (prefix.length === 0) {
+    return null;
+  }
+
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s*");
+
+  return new RegExp(`${escaped}(?<attributes>.*?)%%`, "g");
+}
+
 function findStartMarkers(
   content: string,
   configuredStartMarker: string,
 ): Array<{ index: number; text: string; attributes: string }> {
-  if (configuredStartMarker === "%% concordance:start %%") {
+  const markerPattern = buildStartMarkerPattern(configuredStartMarker);
+
+  if (markerPattern) {
     const markers: Array<{ index: number; text: string; attributes: string }> = [];
-    const markerPattern = /%%\s*concordance:start(?<attributes>.*?)%%/g;
     let match = markerPattern.exec(content);
 
     while (match) {
