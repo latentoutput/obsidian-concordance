@@ -3,3 +3,4 @@ main.js
 pnpm-lock.yaml
 data.json
 .claude/
+test-vault/
