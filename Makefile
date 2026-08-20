@@ -6,6 +6,7 @@ help:
 	@echo "  Everyday"
 	@echo "    make dev             watch build"
 	@echo "    make qa              full local gate (what the pre-push hook runs)"
+	@echo "    make pr              push branch, open the PR, enable auto-merge"
 	@echo "    make install-local VAULT=~/path/to/vault   build and install for manual testing"
 	@echo ""
 	@echo "  Releasing (main requires a PR, this drives the whole flow)"
@@ -22,7 +23,7 @@ help:
 	@echo ""
 	@echo "  See CONTRIBUTING.md for the branch and PR workflow."
 
-.PHONY: help install install-local dev build typecheck lint lint-fix test format format-check audit outdated qa security security-history clean bump bump-patch bump-minor bump-major release release-check release-patch release-minor release-major release-version
+.PHONY: help pr install install-local dev build typecheck lint lint-fix test format format-check audit outdated qa security security-history clean bump bump-patch bump-minor bump-major release release-check release-patch release-minor release-major release-version
 
 install:
 	npm install
@@ -38,6 +39,27 @@ install-local: build
 	  mkdir -p "$$PLUGIN_DIR"; \
 	  cp main.js manifest.json styles.css "$$PLUGIN_DIR/"; \
 	  echo "Installed Concordance into $$PLUGIN_DIR. Reload Obsidian or toggle the plugin to pick up the build."
+
+pr:
+	@BRANCH=$$(git rev-parse --abbrev-ref HEAD); \
+	  if [ "$$BRANCH" = "main" ]; then \
+	    echo "You are on main, which is protected. Branch first:" >&2; \
+	    echo "  git checkout -b fix/something" >&2; \
+	    exit 1; \
+	  fi; \
+	  if [ -n "$$(git status --porcelain)" ]; then \
+	    echo "Uncommitted changes. Commit them first." >&2; \
+	    git status --short >&2; \
+	    exit 1; \
+	  fi; \
+	  git push -u origin "$$BRANCH" || exit 1; \
+	  if gh pr view >/dev/null 2>&1; then \
+	    echo "PR already exists, updated it."; \
+	  else \
+	    gh pr create --fill-first || exit 1; \
+	  fi; \
+	  gh pr merge --auto --squash; \
+	  gh pr view --json url --jq '"  " + .url'
 
 dev:
 	npm run dev
