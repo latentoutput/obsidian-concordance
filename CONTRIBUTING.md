@@ -115,6 +115,26 @@ about Obsidian stable (see below) is the other half of compatibility
 hygiene: it reminds you to test against the build most users actually
 run, not just the Catalyst insider track.
 
+## Commit messages
+
+Conventional Commits, because `make release` reads the subject lines to suggest
+a semver bump. The prefix is load-bearing:
+
+| Prefix                                            | Suggests |
+| ------------------------------------------------- | -------- |
+| `feat:` / `feat(scope):`                          | minor    |
+| `type!:` or a `BREAKING CHANGE` body trailer      | major    |
+| `fix:` `docs:` `chore:` `ci:` `test:` `refactor:` | patch    |
+| no prefix                                         | patch    |
+
+Unprefixed commits are fine, they just always suggest patch and you override at
+the release prompt. The convention is also written into `CLAUDE.md` so agent
+sessions follow it, which matters here because most commits are agent-authored.
+
+The subject becomes the PR title via `gh pr create --fill-first`, so write it
+as one. Use `--fill-first` rather than `--fill`, or the whole body ends up in
+the title.
+
 ## Branching and PRs
 
 `main` is protected. Direct pushes are rejected, so every change lands as a
