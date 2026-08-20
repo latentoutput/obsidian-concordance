@@ -59,7 +59,8 @@ pr:
 	    gh pr create --fill-first || exit 1; \
 	  fi; \
 	  gh pr merge --auto --squash; \
-	  gh pr view --json url --jq '"  " + .url'
+	  gh pr view --json url --jq '"  " + .url'; \
+	  ./scripts/release-notice.sh || true
 
 dev:
 	npm run dev
