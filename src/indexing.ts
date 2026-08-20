@@ -406,10 +406,26 @@ function frontmatterMatches(
   }
 
   if (Array.isArray(raw)) {
-    return raw.some((entry: unknown) => String(entry).trim() === value);
+    return raw.some((entry: unknown) => scalarMatches(entry, value));
   }
 
-  return String(raw).trim() === value;
+  return scalarMatches(raw, value);
+}
+
+// Frontmatter holds whatever YAML parsed, so a property can be a nested map or
+// a list of them. Only scalars can meaningfully equal a plain-text filter, and
+// stringifying anything else yields "[object Object]", which matches nothing a
+// user would type. Rejecting non-scalars outright says that deliberately.
+function scalarMatches(raw: unknown, value: string): boolean {
+  if (typeof raw === "string") {
+    return raw.trim() === value;
+  }
+
+  if (typeof raw === "number" || typeof raw === "boolean" || typeof raw === "bigint") {
+    return String(raw) === value;
+  }
+
+  return false;
 }
 
 function parseFilenameTemplate(
