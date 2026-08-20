@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildGeneratedBlock,
   collectPreservedLinkParts,
+  countOccurrences,
+  extractWikilinkEntries,
   extractWikilinkTargets,
+  getLinkStats,
   inspectGeneratedBlock,
   replaceGeneratedBlock,
 } from "./block";
@@ -182,5 +185,134 @@ describe("custom start markers", () => {
     const result = inspectGeneratedBlock(content, odd);
 
     expect(result.status).toBe("found");
+  });
+});
+
+describe("empty and degenerate blocks", () => {
+  it("emits bare markers when there is nothing to link", () => {
+    expect(buildGeneratedBlock([], settings)).toBe(
+      `${settings.startMarker}\n${settings.endMarker}`,
+    );
+  });
+
+  it("preserves an alias and a subpath on a kept link", () => {
+    const preserved = collectPreservedLinkParts("- [[Note#Section|Alias]]");
+
+    expect(buildGeneratedBlock(["Note"], settings, settings.startMarker, preserved)).toContain(
+      "- [[Note#Section|Alias]]",
+    );
+  });
+
+  it("returns nothing to preserve when there is no existing block", () => {
+    expect(collectPreservedLinkParts(null).size).toBe(0);
+    expect(collectPreservedLinkParts("").size).toBe(0);
+  });
+
+  it("reports a block whose end marker precedes its start marker as malformed", () => {
+    const content = [settings.endMarker, "- [[Stray]]", settings.startMarker].join("\n");
+
+    expect(inspectGeneratedBlock(content, settings).status).toBe("malformed-block");
+  });
+
+  it("refuses to rewrite a malformed block", () => {
+    const content = [settings.endMarker, settings.startMarker].join("\n");
+    const result = replaceGeneratedBlock(content, "ignored", true, settings);
+
+    expect(result.status).toBe("malformed-block");
+  });
+});
+
+describe("inserting a missing block", () => {
+  const generated = buildGeneratedBlock(["Note"], settings);
+
+  it("leaves the note alone when insertion was not requested", () => {
+    const result = replaceGeneratedBlock("Just prose.", generated, false, settings);
+
+    expect(result).toEqual({ status: "missing-block", existingBlock: null });
+  });
+
+  it("appends the block under the configured heading", () => {
+    const result = replaceGeneratedBlock("Just prose.", generated, true, settings);
+
+    expect(result.status).toBe("found");
+    expect(result.status === "found" && result.nextContent).toContain("## Index");
+    expect(result.status === "found" && result.nextContent).toContain("- [[Note]]");
+  });
+
+  it("omits the heading when it is configured empty", () => {
+    const result = replaceGeneratedBlock("Just prose.", generated, true, {
+      ...settings,
+      autoIndexHeading: "   ",
+    });
+
+    expect(result.status === "found" && result.nextContent).not.toContain("##");
+  });
+
+  it("normalises to exactly one blank line whether or not the note ends in a newline", () => {
+    const expected = `Prose.\n\n## Index\n${generated}\n`;
+
+    const withTrailing = replaceGeneratedBlock("Prose.\n", generated, true, settings);
+    const withoutTrailing = replaceGeneratedBlock("Prose.", generated, true, settings);
+
+    expect(withTrailing.status === "found" && withTrailing.nextContent).toBe(expected);
+    expect(withoutTrailing.status === "found" && withoutTrailing.nextContent).toBe(expected);
+  });
+});
+
+describe("link statistics", () => {
+  it("splits links into added, removed, and unchanged", () => {
+    expect(getLinkStats(["Kept", "Gone"], ["Kept", "New"])).toEqual({
+      added: ["New"],
+      removed: ["Gone"],
+      unchanged: ["Kept"],
+    });
+  });
+
+  it("treats both sides being empty as no change at all", () => {
+    expect(getLinkStats([], [])).toEqual({ added: [], removed: [], unchanged: [] });
+  });
+});
+
+describe("scanning helpers", () => {
+  it("counts every occurrence, including repeats on one line", () => {
+    expect(countOccurrences("a %% b %% c %%", "%%")).toBe(3);
+    expect(countOccurrences("nothing here", "%%")).toBe(0);
+  });
+
+  it("separates a wikilink into target, subpath, and alias", () => {
+    expect(extractWikilinkEntries("- [[Note#Section|Alias]]")).toEqual([
+      { target: "Note", subpath: "#Section", alias: "Alias" },
+    ]);
+    expect(extractWikilinkEntries("- [[Plain]]")).toEqual([
+      { target: "Plain", subpath: "", alias: null },
+    ]);
+  });
+});
+
+describe("custom markers", () => {
+  const custom: ConcordanceSettings = {
+    ...settings,
+    startMarker: "<!-- concordance:start -->",
+    endMarker: "<!-- concordance:end -->",
+  };
+
+  it("falls back to literal matching for markers that do not close with %%", () => {
+    const content = [custom.startMarker, "- [[Note]]", custom.endMarker].join("\n");
+
+    expect(inspectGeneratedBlock(content, custom).status).toBe("found");
+  });
+
+  it("cannot disambiguate a start marker that is only a %% pair", () => {
+    // buildStartMarkerPattern has no prefix to anchor on, so it gives up and
+    // the literal fallback counts every %% in the note, including the end
+    // marker's own. Reporting malformed is the safe answer: it refuses to
+    // guess at boundaries rather than rewriting the wrong span.
+    const bare: ConcordanceSettings = { ...settings, startMarker: "%%", endMarker: "%% end %%" };
+    const content = [bare.startMarker, "- [[Note]]", bare.endMarker].join("\n");
+
+    expect(inspectGeneratedBlock(content, bare)).toMatchObject({
+      status: "malformed-block",
+      error: "Concordance start and end markers must appear exactly once each.",
+    });
   });
 });
