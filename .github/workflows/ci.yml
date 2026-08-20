@@ -43,9 +43,7 @@ jobs:
         run: npm run test
 
       - name: Obsidian API floor
-        run: |
-          npm run check:min-app-version
-          npm run check:api-floor
+        run: npm run check:api-floor
 
       - name: Build
         run: npm run build

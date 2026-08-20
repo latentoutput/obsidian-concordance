@@ -55,6 +55,37 @@ scripts/             Local QA / security / compatibility helpers
 The bundled `main.js` is the only runtime asset that ships to users, alongside
 `manifest.json` and `styles.css`.
 
+## Linting
+
+`npm run lint` runs `eslint-plugin-obsidianmd`, Obsidian's official rule set,
+on top of `typescript-eslint`. These are the same developer guidelines the
+community directory's scanner checks after you publish a release, so running
+them here means a failed review surfaces at `make qa` time rather than after
+you have already tagged.
+
+The Obsidian rules are scoped to `src/` in `eslint.config.js`. They describe
+plugin code running inside Obsidian, so applied repo-wide they flag every Node
+import and `console.log` in our build scripts, which run on a developer machine
+and never ship. The directory's own scanner skips the same paths, so linting
+them here would only report failures the review never sees.
+
+Three exemptions are configured, each with its reasoning in
+`eslint.config.js`:
+
+- **`ui/sentence-case` knows "Concordance" is a brand.** Otherwise every
+  mention of the plugin's own name in UI prose reads as a stray capital.
+- **`ui/sentence-case` skips multi-line strings.** The only ones we have are
+  newline-delimited example lists in textarea placeholders, which are sample
+  folder and search terms rather than sentences.
+- **`settings-tab/prefer-setting-definitions` and `no-deprecated` are off for
+  `src/settings.ts`.** Both push toward Obsidian 1.13's declarative settings
+  API, which we cannot adopt while `minAppVersion` is 1.8.0. Tracked in
+  [#35](https://github.com/nsyout/obsidian-concordance/issues/35).
+
+Note that inline `eslint-disable` comments cannot silence the Obsidian rules.
+The plugin sets `eslint-comments/no-restricted-disable`, so exemptions have to
+be declared in the config where they are visible and reviewable.
+
 ## Obsidian API compatibility
 
 `manifest.json`'s `minAppVersion` is the oldest Obsidian build a user can
@@ -63,31 +94,16 @@ the lowest version that has every API you actually use, not to keep it in
 lockstep with current stable. Most community plugins drift years behind
 stable, which is normal and fine.
 
-A check verifies the declared floor is honest:
+Two checks verify the declared floor is honest, and they work differently
+enough that both earn their place.
 
-```sh
-npm run check:min-app-version
-```
+The first is the `obsidianmd/no-unsupported-api` lint rule, which comes free
+with `npm run lint`. It reads `minAppVersion` straight from `manifest.json`
+and checks member-level usage against Obsidian's own table of introduction
+versions, so it catches `Vault.cachedRead` and not merely the `Vault` import.
+It needs no build and reports the exact version each member requires.
 
-The script walks `src/` for named imports from `"obsidian"`, looks each
-symbol up in `scripts/obsidian-api-versions.json` (a hand-curated table
-mapping `symbol → introduction version`), takes the max, and compares it
-against `manifest.json`'s `minAppVersion`. Three outcomes:
-
-- **Pass.** Declared floor is at or above the honest floor, so nothing to do.
-- **Below floor (exit 1).** A symbol you import requires a newer build
-  than `minAppVersion` claims. Raise `minAppVersion` in `manifest.json`
-  to the printed value.
-- **Unknown symbol (exit 2).** You imported something not in the table.
-  Look up its introduction version in the Obsidian changelog and add the
-  entry to `scripts/obsidian-api-versions.json`.
-
-**Caveat:** the check is symbol-level. It only sees names in
-`import { ... } from "obsidian"`, so a method call like
-`metadataCache.fileToLinktext(...)` is invisible to it no matter how new
-the method is.
-
-A second check closes that gap by compiling against the floor itself:
+The second compiles against the floor itself:
 
 ```sh
 npm run check:api-floor
@@ -102,18 +118,25 @@ This check fails only when the code actually reaches past the floor, which
 is exactly when you have to decide: avoid the API, or raise `minAppVersion`
 and `versions.json` together.
 
+The lint rule is faster and pinpoints the offending member. The compile is
+slower but authoritative, since it uses the real typings rather than a table
+and so also covers whatever the table has not caught up with. Keep both.
+
 Because the floor is verified this way, the `obsidian` devDependency is free
 to track latest and dependabot can bump it without weakening anything.
 
-Both checks run on every push and PR via `.github/workflows/ci.yml`.
-`.github/workflows/obsidian-watch.yml` runs them weekly as a fallback and
-opens an issue if the floor drifts while nobody is looking.
+Both run on every push and PR via `.github/workflows/ci.yml`.
+`.github/workflows/obsidian-watch.yml` runs `check:api-floor` weekly as a
+fallback and opens an issue if the floor drifts while nobody is looking. It
+does not repeat the lint rule, which already runs on every PR. The weekly job
+exists for the part that can start failing without anyone touching this repo,
+which is the freshly downloaded typings.
 
 Signature changes, behavioral changes, and event-name strings still slip
-past both, so when you touch something subtle, test it in a real vault. The release-time heads-up
-about Obsidian stable (see below) is the other half of compatibility
-hygiene: it reminds you to test against the build most users actually
-run, not just the Catalyst insider track.
+past both, so when you touch something subtle, test it in a real vault. The
+release-time heads-up about Obsidian stable (see below) is the other half of
+compatibility hygiene: it reminds you to test against the build most users
+actually run, not just the Catalyst insider track.
 
 ## Commit messages
 

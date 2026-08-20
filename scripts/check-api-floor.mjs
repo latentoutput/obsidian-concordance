@@ -10,8 +10,12 @@
  * actually reaches past the floor, which is the moment to decide whether to
  * avoid the API or raise minAppVersion.
  *
- * Complements check-min-app-version.mjs, which inspects imported symbol names
- * only and so cannot see method calls such as MetadataCache#fileToLinktext.
+ * Complements eslint-plugin-obsidianmd's no-unsupported-api rule. That rule
+ * checks member-level usage against a table of introduction versions, so it
+ * catches the common cases without a build. This one compiles the whole of
+ * src/ against the real typings for the floor, so it also covers anything the
+ * table has not caught up with, including newly added APIs and overload
+ * signatures that changed shape between versions.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";

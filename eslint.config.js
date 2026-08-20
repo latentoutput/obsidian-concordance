@@ -1,5 +1,21 @@
 import eslintConfigPrettier from "eslint-config-prettier";
+import obsidianmd from "eslint-plugin-obsidianmd";
 import tseslint from "typescript-eslint";
+
+// Obsidian's guideline rules describe plugin code running inside Obsidian, so
+// they only make sense for src/. Applied repo-wide they flag every Node import
+// and console.log in our build scripts, which run on a developer machine and
+// never ship. The community directory's own scanner skips the same paths
+// (scripts, docs, test-vault, *.mjs, *.test.*), so linting them here would
+// report failures the review never sees.
+//
+// The package.json entries keep their own targeting, since they lint
+// dependency choices rather than source.
+const obsidianmdForSource = obsidianmd.configs.recommended.map((config) =>
+  Array.isArray(config.files) && config.files.includes("package.json")
+    ? config
+    : { ...config, files: ["src/**/*.ts"], ignores: ["src/**/*.test.ts"] },
+);
 
 export default [
   {
@@ -7,9 +23,11 @@ export default [
     ignores: ["main.js", "node_modules/**", "test-vault/**"],
   },
   ...tseslint.configs.recommended,
+  ...obsidianmdForSource,
   eslintConfigPrettier,
   {
     files: ["src/**/*.ts"],
+    plugins: { obsidianmd },
     languageOptions: {
       parserOptions: {
         projectService: true,
@@ -19,6 +37,27 @@ export default [
     rules: {
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-floating-promises": "error",
+      // "Concordance" is the plugin's name, so it stays capitalised wherever it
+      // appears in UI prose. Without this the rule reads it as a stray capital.
+      // ignoreRegex skips multi-line strings: the only ones we have are
+      // newline-delimited example lists in textarea placeholders, which are
+      // sample folder and search terms rather than sentences.
+      "obsidianmd/ui/sentence-case": ["warn", { brands: ["Concordance"], ignoreRegex: ["\\n"] }],
+    },
+  },
+  {
+    // Obsidian 1.13 replaced display() with the declarative
+    // getSettingDefinitions() API, but manifest.json declares minAppVersion
+    // 1.8.0, where display() is the only option. The plugin's own
+    // settings-tab/require-display rule agrees while the floor is below 1.13.
+    // Revisit when minAppVersion moves. Tracked in #35.
+    files: ["src/settings.ts"],
+    plugins: { obsidianmd },
+    // Inline eslint-disable comments cannot silence these (the plugin sets
+    // eslint-comments/no-restricted-disable), so the exemption lives here.
+    rules: {
+      "obsidianmd/settings-tab/prefer-setting-definitions": "off",
+      "@typescript-eslint/no-deprecated": "off",
     },
   },
 ];
