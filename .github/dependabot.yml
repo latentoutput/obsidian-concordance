@@ -15,8 +15,16 @@ updates:
         # safe on its own: the check fails only when the code actually uses an
         # API newer than the floor, which is when the decision is real.
         # obsidian still gets its own PR so an API move stays visible.
+        #
+        # typescript is excluded for a different reason: typescript-eslint pins
+        # a peer range (currently >=4.8.4 <6.1.0), so a TypeScript major lands
+        # ahead of its support and breaks `npm ci` outright. Inside the group
+        # that one failure blocks every unrelated devDependency update in the
+        # same PR. On its own it just sits red until typescript-eslint widens
+        # the range, and then it merges.
         exclude-patterns:
           - "obsidian"
+          - "typescript"
 
   - package-ecosystem: github-actions
     directory: /
