@@ -28,13 +28,16 @@ zero approvals required. Every change goes through a branch.
 
 ```sh
 git checkout -b fix/thing
-git push -u origin fix/thing      # pre-push hook runs the full qa suite
-gh pr create --fill-first          # --fill-first, not --fill, or the body becomes the title
-gh pr merge --auto --squash
+git commit -m "fix: ..."
+make pr
 ```
 
-Never commit directly to `main`. Never bypass the hook with `--no-verify`
-without saying why.
+`make pr` pushes the branch, opens the PR with `--fill-first`, and enables
+auto-merge. Use it rather than hand-rolling `gh pr create`, which defaults to
+`--fill` and dumps the whole commit body into the title.
+
+Never commit directly to `main`. Never bypass the pre-push hook with
+`--no-verify` without saying why.
 
 ## Constraints that are easy to violate
 

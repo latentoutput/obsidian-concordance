@@ -143,14 +143,16 @@ without reviewing them, but CI has to be green first.
 
 ```sh
 git checkout -b fix/some-thing
-# work
-git push -u origin fix/some-thing     # the pre-push hook runs qa
-gh pr create --fill
-gh pr merge --auto --squash           # merges itself once CI passes
+# work, then commit
+make pr
 ```
 
-`gh pr create --fill` takes the PR title from your first commit line, so write
-that line as the title you want. Branches delete themselves on merge.
+`make pr` pushes the branch, opens the PR, and enables auto-merge so it lands
+once CI passes. It refuses if you are on `main` or have uncommitted changes,
+and it updates an existing PR rather than failing.
+
+The PR title comes from your first commit line, so write that line as the title
+you want. Branches delete themselves on merge.
 
 Outside contributions run the same `verify` job. A first-time contributor's
 workflow run needs your approval before it starts, which is deliberate:
