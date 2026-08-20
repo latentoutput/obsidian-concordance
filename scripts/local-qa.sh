@@ -34,6 +34,7 @@ run_required "TypeScript typecheck" npm run typecheck
 run_required "ESLint" npm run lint
 run_required "Tests" npm run test
 run_required "Prettier check" npm run format:check
+run_required "Obsidian API floor" npm run check:api-floor
 run_required "Production build" npm run build
 run_required "Dependency audit" npm run deps:audit
 

@@ -35,6 +35,11 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Obsidian API floor
+        run: |
+          npm run check:min-app-version
+          npm run check:api-floor
+
       - name: Dependency audit
         run: npm run deps:audit
 

@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+# Local gate for a push-to-main workflow.
+#
+# CI still checks after the fact and the release workflow gates what ships, but
+# on a repo where main is pushed directly, this is the only step that runs
+# before the code leaves the machine.
+#
+# Bypass deliberately with:  git push --no-verify
+# Or for a run of pushes:    SKIP_HOOKS=1 git push
+
+if [ -n "${SKIP_HOOKS:-}" ]; then
+  printf 'pre-push: skipped (SKIP_HOOKS set)\n'
+  exit 0
+fi
+
+printf 'pre-push: running npm run qa\n\n'
+
+if npm run --silent qa; then
+  exit 0
+fi
+
+printf '\npre-push: checks failed, push aborted.\n'
+printf 'Fix them, or use --no-verify if you know why this is fine.\n'
+exit 1
