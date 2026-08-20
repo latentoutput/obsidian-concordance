@@ -1,6 +1,7 @@
 import type { App, CachedMetadata, FrontMatterCache, MetadataCache, TFile, Vault } from "obsidian";
 import {
   buildGeneratedBlock,
+  collectPreservedLinkParts,
   countOccurrences,
   extractWikilinkTargets,
   getLinkStats,
@@ -99,7 +100,15 @@ export async function createUpdatePlan(
     inspection.status === "found" ? inspection.config : getDefaultBlockConfig(settings);
   const childFiles = findChildFiles(context, index, settings, blockConfig);
   const generatedLinks = childFiles.map((file) => getLinkTarget(file, index, blockConfig));
-  const generatedBlock = buildGeneratedBlock(generatedLinks, settings, blockConfig.startMarker);
+  const preservedLinkParts = collectPreservedLinkParts(
+    inspection.status === "found" ? inspection.existingBlock : null,
+  );
+  const generatedBlock = buildGeneratedBlock(
+    generatedLinks,
+    settings,
+    blockConfig.startMarker,
+    preservedLinkParts,
+  );
   const block = replaceGeneratedBlock(content, generatedBlock, addMissingBlock, settings);
   const existingLinks = block.existingBlock ? extractWikilinkTargets(block.existingBlock) : [];
   const stats = getLinkStats(existingLinks, generatedLinks);
