@@ -1,4 +1,27 @@
-.PHONY: install install-local dev build typecheck lint lint-fix test format format-check audit outdated qa security security-history clean bump bump-patch bump-minor bump-major release release-check release-patch release-minor release-major
+.DEFAULT_GOAL := help
+
+help:
+	@echo "Concordance make targets"
+	@echo ""
+	@echo "  Everyday"
+	@echo "    make dev             watch build"
+	@echo "    make qa              full local gate (what the pre-push hook runs)"
+	@echo "    make install-local VAULT=~/path/to/vault   build and install for manual testing"
+	@echo ""
+	@echo "  Releasing (main requires a PR, this drives the whole flow)"
+	@echo "    make release-patch   bug fixes     0.1.2 -> 0.1.3"
+	@echo "    make release-minor   new features  0.1.2 -> 0.2.0"
+	@echo "    make release-major   breaking      0.1.2 -> 1.0.0"
+	@echo "    make release-version VERSION=0.4.2"
+	@echo "    add DRY=1 to preview without changing anything"
+	@echo ""
+	@echo "  Checks"
+	@echo "    make typecheck lint test format-check audit"
+	@echo "    npm run check:api-floor   compile src against minAppVersion's typings"
+	@echo ""
+	@echo "  See CONTRIBUTING.md for the branch and PR workflow."
+
+.PHONY: help install install-local dev build typecheck lint lint-fix test format format-check audit outdated qa security security-history clean bump bump-patch bump-minor bump-major release release-check release-patch release-minor release-major release-version
 
 install:
 	npm install
@@ -81,35 +104,22 @@ release-check:
 	    echo ""; \
 	  fi
 
-release: qa release-check
-	@VERSION=$$(node -p "require('./manifest.json').version"); \
-	  echo ""; \
-	  echo "About to release $$VERSION."; \
-	  echo ""; \
-	  echo "Have you:"; \
-	  echo "  [ ] Installed main.js in a real Obsidian vault (make install-local VAULT=...)?"; \
-	  echo "  [ ] Exercised 'Update current index' and 'Update all indexes'?"; \
-	  echo "  [ ] Verified the settings tab renders and persists changes?"; \
-	  echo ""; \
-	  printf "Continue? [y/N]: "; \
-	  read REPLY; \
-	  case "$$REPLY" in \
-	    y|Y|yes|Yes|YES) ;; \
-	    *) echo "Release canceled. No tag was pushed." >&2; exit 1 ;; \
-	  esac; \
-	  git rev-parse "$$VERSION" >/dev/null 2>&1 || git tag "$$VERSION"; \
-	  echo "Pushing tag $$VERSION; GitHub Actions will build, attest, and publish the release."; \
-	  git push --follow-tags; \
-	  echo "Watch the release workflow: gh run watch --exit-status"
+release:
+	@echo "main requires a PR, so releases go through scripts/release.sh."
+	@echo "Use: make release-patch | release-minor | release-major"
+	@echo "Or:  make release-version VERSION=0.4.2"
+	@echo "Add DRY=1 to any of them to see the steps without doing them."
+	@exit 64
 
 release-patch:
-	$(MAKE) bump-patch
-	$(MAKE) release
+	@scripts/release.sh patch $(if $(DRY),--dry-run)
 
 release-minor:
-	$(MAKE) bump-minor
-	$(MAKE) release
+	@scripts/release.sh minor $(if $(DRY),--dry-run)
 
 release-major:
-	$(MAKE) bump-major
-	$(MAKE) release
+	@scripts/release.sh major $(if $(DRY),--dry-run)
+
+release-version:
+	@test -n "$(VERSION)" || { echo "usage: make release-version VERSION=0.4.2" >&2; exit 64; }
+	@scripts/release.sh $(VERSION) $(if $(DRY),--dry-run)
