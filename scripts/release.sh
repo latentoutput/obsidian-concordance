@@ -25,28 +25,10 @@ done
 say() { printf '\n==> %s\n' "$*"; }
 run() { if [ -n "$DRY" ]; then printf '  would run: %s\n' "$*"; else "$@"; fi; }
 
-# Semver encodes intent, which only a human has. Trust explicit declarations
-# only; guessing from commit prose misfires (a body line starting with "Adds"
-# is not a feature), so anything undeclared falls back to patch.
+# Delegates to scripts/suggest-bump.sh so `make pr` can show the same answer
+# before you merge, instead of the two drifting apart.
 propose_bump() {
-  local last subjects bodies shipped
-  last=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-  [ -z "$last" ] && { echo "patch|no previous tag to compare against"; return; }
-
-  subjects=$(git log --format=%s "$last"..HEAD 2>/dev/null || echo "")
-  bodies=$(git log --format=%b "$last"..HEAD 2>/dev/null || echo "")
-  shipped=$(git diff --name-only "$last"..HEAD -- src/ styles.css 2>/dev/null)
-
-  if printf '%s' "$bodies" | grep -q 'BREAKING CHANGE' \
-     || printf '%s' "$subjects" | grep -qE '^[a-z]+(\(.+\))?!:'; then
-    echo "major|a commit declares a breaking change"
-  elif printf '%s' "$subjects" | grep -qE '^feat(\(.+\))?:'; then
-    echo "minor|a commit is prefixed feat:"
-  elif [ -z "$shipped" ]; then
-    echo "patch|nothing under src/ or styles.css changed, so users see no behaviour change"
-  else
-    echo "patch|src/ changed but no commit declared a feature or breaking change"
-  fi
+  "$(dirname "$0")/suggest-bump.sh"
 }
 
 [ -n "$DRY" ] && printf '\n*** DRY RUN. Nothing will be changed, pushed, or tagged. ***\n'

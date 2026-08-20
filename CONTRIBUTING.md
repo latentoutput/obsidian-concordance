@@ -252,6 +252,46 @@ Outside contributions run the same `verify` job. A first-time contributor's
 workflow run needs your approval before it starts, which is deliberate:
 `npm ci` executes their lockfile's install scripts on the runner.
 
+## Knowing when to release
+
+Merging publishes nothing. A release is a separate, deliberate step, so it is
+easy to land a fix and forget that nobody has received it.
+
+`make pr` therefore ends by saying whether the branch needs one. If nothing
+under `src/` or `styles.css` changed, it says so quietly and reminds you of any
+commits still unreleased from earlier work. If something did change, it prints
+a loud block naming the files that reach users, the bump it implies and the
+version that produces, every unreleased commit that would ship alongside, and
+the exact command to run.
+
+Test files are excluded from that judgement. They sit under `src/` but are
+never bundled into `main.js`, so a test-only change ships nothing. Counting
+them would make the notice cry wolf, and a notice you learn to ignore is worse
+than none.
+
+The bump logic lives in `scripts/suggest-bump.sh`, which `make release` also
+calls, so the answer you see at PR time is the one you get at release time.
+It only trusts explicit declarations, because intent cannot be read from commit
+prose:
+
+| Signal                                   | Bump  |
+| ---------------------------------------- | ----- |
+| `BREAKING CHANGE` in a body, or `feat!:` | major |
+| A subject prefixed `feat:`               | minor |
+| Anything else                            | patch |
+
+The banner is coloured by severity, so the size of the change registers before
+you have read a word of it: green for a patch, yellow for a minor, red for a
+major. Colour is on when stdout is a terminal. `NO_COLOR` disables it,
+`FORCE_COLOR` keeps it through a pipe.
+
+To ask the question at any other time, pass a base:
+
+```sh
+scripts/release-notice.sh 0.1.3                  # a release from here
+FORCE_COLOR=1 scripts/release-notice.sh | less -R  # keep the colour
+```
+
 ## Cutting a release
 
 One command, from a clean `main`:
