@@ -145,7 +145,17 @@ run gh pr merge --auto --squash
 
 say "Waiting for CI and merge"
 if [ -z "$DRY" ]; then
-  gh pr checks --watch || { echo "CI failed, PR left open" >&2; exit 1; }
+  # For the first seconds after a push GitHub has not registered the workflow
+  # run yet, and gh reports "no checks reported" and exits nonzero. Wait for a
+  # check to exist before watching, or the release aborts on a race.
+  for _ in $(seq 1 30); do
+    [ "$(gh pr checks --json name --jq 'length' 2>/dev/null || echo 0)" -gt 0 ] && break
+    sleep 4
+  done
+  gh pr checks --watch || {
+    echo "CI failed. The PR is still open, finish it and then run:" >&2
+    echo "  git checkout main && git pull --ff-only && git tag $NEXT && git push origin $NEXT" >&2
+    exit 1; }
   for _ in $(seq 1 60); do
     [ "$(gh pr view --json state --jq .state)" = "MERGED" ] && break
     sleep 5
