@@ -24,6 +24,10 @@ run() {
 
 say() { printf '\n==> %s\n' "$*"; }
 
+if [ -n "$DRY" ]; then
+  printf '\n*** DRY RUN. Nothing will be changed, pushed, or tagged. ***\n'
+fi
+
 say "Preflight"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 [ "$BRANCH" = "main" ] || { echo "must be on main, on $BRANCH" >&2; exit 1; }
@@ -42,7 +46,15 @@ make --no-print-directory release-check || true
 
 CURRENT=$(node -p "require('./package.json').version")
 if [ -n "$DRY" ]; then
-  NEXT="(computed by npm version $BUMP)"
+  # Compute the same version npm would, so the preview is readable.
+  NEXT=$(node -e '
+    const [cur, bump] = process.argv.slice(1);
+    if (/^[0-9]/.test(bump)) { console.log(bump); process.exit(0); }
+    const [x, y, z] = cur.split(".").map(Number);
+    console.log(bump === "patch" ? `${x}.${y}.${z + 1}`
+              : bump === "minor" ? `${x}.${y + 1}.0`
+              : `${x + 1}.0.0`);
+  ' "$CURRENT" "$BUMP")
 else
   npm version "$BUMP" --no-git-tag-version >/dev/null
   NEXT=$(node -p "require('./package.json').version")
@@ -55,7 +67,7 @@ if [ -z "$DRY" ]; then
     echo "manifest.json ($MANIFEST) does not match package.json ($NEXT)" >&2; exit 1; }
 fi
 
-printf '\nHave you installed this build in a real vault and exercised the commands? [y/N]: '
+printf '\nHave you installed this build in a real vault and exercised the commands?%s [y/N]: ' "${DRY:+ (dry run, nothing rides on this)}"
 read -r REPLY
 case "$REPLY" in
   y|Y|yes|Yes|YES) ;;
@@ -90,5 +102,11 @@ run git pull --ff-only
 run git tag "$NEXT"
 run git push origin "$NEXT"
 
-say "Done"
-echo "  release.yml is building. Watch it with: gh run watch --exit-status"
+if [ -n "$DRY" ]; then
+  say "Dry run complete"
+  echo "  Nothing was changed, pushed, or tagged."
+  echo "  Re-run without DRY=1 to release $NEXT for real."
+else
+  say "Done"
+  echo "  release.yml is building. Watch it with: gh run watch --exit-status"
+fi
