@@ -13,7 +13,12 @@ npm run build        # production build (typechecks first)
 npm run test         # vitest
 npm run lint         # eslint
 npm run qa           # typecheck + lint + tests + format + build + audit (production deps only)
+make help            # every target, if you have been away a while
 ```
+
+`npm install` points `core.hooksPath` at `.githooks`, so `git push` runs the
+full `qa` suite first. It takes about four seconds. Bypass it deliberately
+with `git push --no-verify` or `SKIP_HOOKS=1 git push`.
 
 ## Manual testing in Obsidian
 
@@ -77,91 +82,140 @@ against `manifest.json`'s `minAppVersion`. Three outcomes:
   Look up its introduction version in the Obsidian changelog and add the
   entry to `scripts/obsidian-api-versions.json`.
 
-The same check runs in CI via `.github/workflows/obsidian-watch.yml` on
-pushes to `main`, on PRs that touch `src/`, `manifest.json`, or the
-table, and weekly as a fallback. PR failures show up as a red X. Push
-and cron failures open an issue.
+**Caveat:** the check is symbol-level. It only sees names in
+`import { ... } from "obsidian"`, so a method call like
+`metadataCache.fileToLinktext(...)` is invisible to it no matter how new
+the method is.
 
-**Caveat:** the check is symbol-level. Signature changes to existing
-APIs, behavioral changes, and event-name strings don't trigger it, so when
-you touch something subtle, still test it. The release-time heads-up
+A second check closes that gap by compiling against the floor itself:
+
+```sh
+npm run check:api-floor
+```
+
+It reads `minAppVersion`, resolves the newest published `obsidian` typings
+at or below that line, downloads them, and typechecks `src/` against those
+instead of the version in `node_modules`. The installed typings track the
+latest API so editing and tooling stay current, which means the compiler
+will happily accept something that does not exist on the declared floor.
+This check fails only when the code actually reaches past the floor, which
+is exactly when you have to decide: avoid the API, or raise `minAppVersion`
+and `versions.json` together.
+
+Because the floor is verified this way, the `obsidian` devDependency is free
+to track latest and dependabot can bump it without weakening anything.
+
+Both checks run on every push and PR via `.github/workflows/ci.yml`.
+`.github/workflows/obsidian-watch.yml` runs them weekly as a fallback and
+opens an issue if the floor drifts while nobody is looking.
+
+Signature changes, behavioral changes, and event-name strings still slip
+past both, so when you touch something subtle, test it in a real vault. The release-time heads-up
 about Obsidian stable (see below) is the other half of compatibility
 hygiene: it reminds you to test against the build most users actually
 run, not just the Catalyst insider track.
 
+## Branching and PRs
+
+`main` is protected. Direct pushes are rejected, so every change lands as a
+pull request. Required approvals are set to zero, so you merge your own PRs
+without reviewing them, but CI has to be green first.
+
+```sh
+git checkout -b fix/some-thing
+# work
+git push -u origin fix/some-thing     # the pre-push hook runs qa
+gh pr create --fill
+gh pr merge --auto --squash           # merges itself once CI passes
+```
+
+`gh pr create --fill` takes the PR title from your first commit line, so write
+that line as the title you want. Branches delete themselves on merge.
+
+Outside contributions run the same `verify` job. A first-time contributor's
+workflow run needs your approval before it starts, which is deliberate:
+`npm ci` executes their lockfile's install scripts on the runner.
+
 ## Cutting a release
 
-For most releases, one command:
+One command, from a clean `main`:
 
 ```sh
-make release-patch       # bug fixes:     0.1.0 → 0.1.1
-make release-minor       # new features:  0.1.0 → 0.2.0
-make release-major       # breaking:      0.1.0 → 1.0.0
+make release-patch       # bug fixes:     0.1.2 -> 0.1.3
+make release-minor       # new features:  0.1.2 -> 0.2.0
+make release-major       # breaking:      0.1.2 -> 1.0.0
+make release-version VERSION=0.4.2
 ```
 
-Each combined target bumps the version, runs the full QA suite, compares
-`minAppVersion` against the current Obsidian stable release, prints a
-manual-test checklist, prompts for confirmation, then tags and pushes. If
-QA fails or you decline the prompt, the release stops before the tag is
-pushed.
-
-For the very first release (where the bump is already in `manifest.json`),
-or to re-release the current version without a bump, run just:
+Add `DRY=1` to any of them to print the steps without touching anything:
 
 ```sh
-make release
+make release-patch DRY=1
 ```
 
-If you need to bump and release as separate steps (for example, to keep
-working on more commits between the bump and the publish):
+Because `main` requires a PR, the version bump cannot be pushed straight to
+it. `scripts/release.sh` drives the whole sequence instead:
 
-```sh
-make bump-patch          # or bump-minor / bump-major / bump VERSION=0.4.2
-# ...more commits if you want...
-make release
-```
-
-### What the targets actually do
-
-**`bump-*`** wraps `npm version`, which:
-
-1. Updates `version` in `package.json`
-2. Runs the `version` script (`version-bump.mjs`), which:
-   - Sets `version` in `manifest.json`
-   - Appends a `{ newVersion → minAppVersion }` entry to `versions.json`
-3. Commits all three files in a single commit
-4. Creates a **bare semver tag** (e.g. `0.2.0`, never `v0.2.0`). Obsidian
-   requires bare tags, and the bare form is enforced via `.npmrc`'s
+1. **Preflight.** Refuses unless you are on `main`, the tree is clean, and
+   local `main` matches `origin/main`.
+2. **Quality gate.** Runs the full `qa` suite. Nothing proceeds if it fails.
+3. **Stable heads-up.** Compares `minAppVersion` against the current Obsidian
+   stable release, so you know whether you are testing on the build most
+   users actually run.
+4. **Bump.** `npm version <bump> --no-git-tag-version` updates `package.json`,
+   and the `version` script updates `manifest.json` and appends a
+   `{ version -> minAppVersion }` entry to `versions.json`. No commit, no tag
+   yet.
+5. **Manual test prompt.** Asks whether you have installed the build in a real
+   vault and exercised the commands. Answering no aborts and tells you how to
+   revert the bump. Automated tests do not touch Obsidian, so this is the only
+   thing standing between a broken build and your users.
+6. **PR.** Commits the four files on a `release/X.Y.Z` branch, pushes, opens
+   the PR, and enables auto-merge.
+7. **Wait.** Watches CI, then waits for the merge.
+8. **Tag.** Returns to `main`, pulls, and pushes a bare semver tag (`0.1.3`,
+   never `v0.1.3`). Obsidian requires bare tags, enforced by `.npmrc`'s
    `tag-version-prefix=""`.
 
-**`release`**:
+Pushing the tag triggers `.github/workflows/release.yml`, which:
 
-1. Runs the full local `qa` suite (typecheck + lint + tests + format check +
-   production build + dependency audit). If anything fails, the tag is not
-   pushed.
-2. Tags the current `manifest.json` version if it isn't already tagged
-   (covers the first-release case).
-3. Pushes commits and tags to `origin`.
+- Re-runs typecheck, lint, tests, both API floor checks, audit, and the
+  production build as a clean-room rebuild
+- Verifies `manifest.json`'s version matches the pushed tag
+- **Generates artifact attestations** for `main.js`, `manifest.json`, and
+  `styles.css`, cryptographic provenance proving the assets were built from
+  this repo at this commit, verifiable with `gh attestation verify`
+- Creates the GitHub release with those three assets, using `CHANGELOG.md`'s
+  `## [<version>]` section if present, otherwise auto-generated notes
 
-The push triggers the `release.yml` GitHub Actions workflow, which:
-
-- Re-runs typecheck, lint, tests, audit, and the production build in CI for
-  a clean-room rebuild
-- Verifies that `manifest.json`'s version matches the pushed tag
-- **Generates GitHub artifact attestations** for `main.js`, `manifest.json`,
-  and `styles.css` (cryptographic provenance proving the assets were built
-  from the source repository at this commit, which users and reviewers can
-  verify with `gh attestation verify`)
-- Creates the GitHub release, attaching the three assets and using
-  `CHANGELOG.md`'s `## [<version>]` section if present, otherwise
-  auto-generated notes from commits since the previous tag
-
-The three files attached to the release (`main.js`, `manifest.json`,
-`styles.css`) are exactly what Obsidian's community-plugin reviewer
+Those three files are exactly what Obsidian's community-plugin reviewer
 downloads. **Do not** attach the source archive. Only the bundled `main.js`
 runs in users' vaults.
 
-Tail the release workflow after pushing with `gh run watch --exit-status`.
+Tail it with `gh run watch --exit-status`.
+
+### If something goes wrong partway
+
+The script is resumable because each step is ordinary git and gh.
+
+- **CI fails on the release PR.** The PR stays open. Fix it on the same
+  branch, push, and it auto-merges. Then tag by hand:
+  `git checkout main && git pull --ff-only && git tag X.Y.Z && git push origin X.Y.Z`
+- **PR merged but the tag never pushed.** Just push the tag as above.
+- **Tag pushed but the workflow failed.** Fix the cause, delete the tag on
+  both sides (`git tag -d X.Y.Z && git push --delete origin X.Y.Z`), and
+  re-push it. The version in `manifest.json` is already correct.
+
+### Where the version lives
+
+Three files have to agree, and the release workflow fails the build if they
+do not:
+
+- `package.json` — source of truth for `npm version`
+- `manifest.json` — what Obsidian reads to offer an update
+- `versions.json` — maps each plugin version to the `minAppVersion` it needs,
+  so users on older Obsidian are served the last compatible release instead
+  of a broken one
 
 ### Release notes
 
