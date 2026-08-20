@@ -36,6 +36,26 @@ Obsidian (or toggle the plugin) and verify the settings tab renders, the
 "Update current index" / "Update all indexes" / "Check indexes for
 updates" commands behave correctly, and changes persist across reloads.
 
+Much of that is now automated. With **Settings → General → Command line
+interface** enabled, `obsidian eval` runs code inside the live app, so the
+settings tab can be checked without clicking through it:
+
+```sh
+make install-local VAULT=test-vault
+obsidian plugin:reload id=concordance
+obsidian eval code="$(cat test-vault/settings-probe.js)"
+```
+
+`test-vault/settings-probe.js` asserts the plugin loads, the definitions
+produce the expected groups, every stored setting has a control, values round
+trip through storage into `data.json`, and each setting is findable in
+Obsidian's settings search. It restores what it changed and prints `ALL PASS`.
+It is what caught the child prefix template losing its trailing space.
+
+What still needs a human is appearance: `app.setting.open()` does not
+instantiate the modal from `eval`, so nobody has looked at the rendered rows
+but you.
+
 ## Project layout
 
 ```text
@@ -55,6 +75,58 @@ scripts/             Local QA / security / compatibility helpers
 The bundled `main.js` is the only runtime asset that ships to users, alongside
 `manifest.json` and `styles.css`.
 
+## Tests
+
+```sh
+npm run test
+npm run test:coverage
+```
+
+Most of the suite needs no scaffolding, because `block.ts` and `indexing.ts`
+import only types from `obsidian` and take plain objects. `settings.ts` is
+different: it imports `Notice` and `PluginSettingTab` as values, and the
+published `obsidian` package ships types only, with an empty `main`. There is
+no runtime module to load.
+
+So `vitest.config.ts` aliases `obsidian` to `test/obsidian-stub.ts`, which
+implements just the surface the tests touch. The alias applies to vitest only.
+`tsc` still resolves the real typings, so tests are typechecked against the
+actual API rather than against the stub. Add to the stub when a test needs more
+of Obsidian, and keep it minimal so it cannot quietly diverge.
+
+`test/fake-element.ts` covers the other half of the problem. `createEl`,
+`createDiv`, and `createSpan` are Obsidian's additions to `HTMLElement`, not
+standard DOM, so jsdom would not supply them either. `FakeElement` records the
+tree a renderer builds instead of building one, which is enough to assert
+structure, classes, and event handlers. Pass it through `asContainer()`, which
+keeps the cast in one place.
+
+`test/obsidian-stub.ts` also provides `Modal`, `Setting`, `Plugin`, and the
+button and toggle components, each recording what it was given. Modals register
+themselves in `createdModals` and settings in `createdSettings`, so a test can
+click a button a modal built without the modal having to expose it.
+
+Coverage is 100% of statements in every source module, and 95% of branches:
+
+| Module        | Statements | Branches |
+| ------------- | ---------- | -------- |
+| `main.ts`     | 100%       | 100%     |
+| `modals.ts`   | 100%       | 100%     |
+| `settings.ts` | 100%       | 100%     |
+| `ui.ts`       | 100%       | 100%     |
+| `indexing.ts` | 100%       | 94%      |
+| `block.ts`    | 100%       | 93%      |
+
+Keep it there. If a change drops a module below 100% of statements, the missing
+lines are usually the interesting ones: `validateSettings` had no tests at all
+until one was written, and covering the settings tab is what surfaced the child
+prefix template losing its trailing space.
+
+What no unit test can reach is rendering. Obsidian owns the renderer that turns
+`getSettingDefinitions()` into DOM, so the tests cover the data and the storage
+hooks while the appearance of the tab still needs a real vault. See
+[Manual testing in Obsidian](#manual-testing-in-obsidian).
+
 ## Linting
 
 `npm run lint` runs `eslint-plugin-obsidianmd`, Obsidian's official rule set,
@@ -69,7 +141,7 @@ import and `console.log` in our build scripts, which run on a developer machine
 and never ship. The directory's own scanner skips the same paths, so linting
 them here would only report failures the review never sees.
 
-Three exemptions are configured, each with its reasoning in
+Two exemptions are configured, both with their reasoning in
 `eslint.config.js`:
 
 - **`ui/sentence-case` knows "Concordance" is a brand.** Otherwise every
@@ -77,10 +149,9 @@ Three exemptions are configured, each with its reasoning in
 - **`ui/sentence-case` skips multi-line strings.** The only ones we have are
   newline-delimited example lists in textarea placeholders, which are sample
   folder and search terms rather than sentences.
-- **`settings-tab/prefer-setting-definitions` and `no-deprecated` are off for
-  `src/settings.ts`.** Both push toward Obsidian 1.13's declarative settings
-  API, which we cannot adopt while `minAppVersion` is 1.8.0. Tracked in
-  [#35](https://github.com/nsyout/obsidian-concordance/issues/35).
+
+Nothing else is turned off. If a rule fires, the fix is the code, not the
+config.
 
 Note that inline `eslint-disable` comments cannot silence the Obsidian rules.
 The plugin sets `eslint-comments/no-restricted-disable`, so exemptions have to

@@ -45,19 +45,4 @@ export default [
       "obsidianmd/ui/sentence-case": ["warn", { brands: ["Concordance"], ignoreRegex: ["\\n"] }],
     },
   },
-  {
-    // Obsidian 1.13 replaced display() with the declarative
-    // getSettingDefinitions() API, but manifest.json declares minAppVersion
-    // 1.8.0, where display() is the only option. The plugin's own
-    // settings-tab/require-display rule agrees while the floor is below 1.13.
-    // Revisit when minAppVersion moves. Tracked in #35.
-    files: ["src/settings.ts"],
-    plugins: { obsidianmd },
-    // Inline eslint-disable comments cannot silence these (the plugin sets
-    // eslint-comments/no-restricted-disable), so the exemption lives here.
-    rules: {
-      "obsidianmd/settings-tab/prefer-setting-definitions": "off",
-      "@typescript-eslint/no-deprecated": "off",
-    },
-  },
 ];

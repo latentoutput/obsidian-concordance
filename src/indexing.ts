@@ -250,11 +250,17 @@ function findTagChildFiles(
   settings: ConcordanceSettings,
   blockConfig: IndexBlockConfig,
 ): TFile[] {
-  const tag = normalizeTag(blockConfig.tag ?? "");
+  // Guard the configured value, not the normalised one: normalizeTag always
+  // prepends "#", so it can never return an empty string and this check never
+  // fired. An unset or blank tag would fall through and match "#", which
+  // matches nothing, so the outcome was right by accident.
+  const configuredTag = blockConfig.tag?.trim() ?? "";
 
-  if (tag.length === 0) {
+  if (configuredTag.length === 0) {
     return [];
   }
+
+  const tag = normalizeTag(configuredTag);
 
   return filterCandidateFiles(files, index, settings, (file) => {
     return getAllTagsFromCache(metadataCache.getFileCache(file)).has(tag);
