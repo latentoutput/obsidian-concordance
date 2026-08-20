@@ -241,6 +241,48 @@ runs in users' vaults.
 
 Tail it with `gh run watch --exit-status`.
 
+### After the tag: the community directory
+
+Nothing. Pushing the tag is the last thing you do.
+
+Obsidian's community directory polls for new releases on its own schedule and
+runs an automated review of every version, not only the first one. You do not
+open a PR, request anything, or press a button. The
+[FAQ](https://docs.obsidian.md/community-directory/faq) is explicit: you submit
+the initial version once, and after that "making a new release is enough for
+users to receive the update".
+
+The scan covers `manifest.json`, the release assets, the source code, and build
+verification, rating each result an error, a warning, a recommendation, or a
+pass. Warnings do not block anything. Errors do, and a failed review is the one
+case where a release quietly never reaches users, so if a version does not show
+up on the listing after a day, check the dashboard rather than re-cutting it.
+The failure detail only appears there.
+
+The entry's management page on the
+[community directory](https://community.obsidian.md) has a `...` menu with
+three controls that are easy to mistake for each other:
+
+- **Check for new releases.** Runs the poll now instead of waiting for the
+  scheduled one. It does nothing the periodic check would not have done on its
+  own, so reach for it only when you are impatient or a release looks stuck.
+- **Request review.** Re-scans the current release without cutting a new one.
+  This is the one to use after fixing a failed review.
+- **Review branch.** Previews a scan against any branch, tag, or commit SHA
+  with no release required. Worth running before a release that touches the
+  manifest, the build, or dependencies.
+
+Two scanner details specific to this repo. It skips a fixed list of paths that
+happens to cover `test-vault`, `scripts`, `docs`, `esbuild.config.mjs`,
+`version-bump.mjs`, and every `*.mjs` file, so in practice only `src/` is
+reviewed. And it builds with the first of `build`, `build:plugin`, or `compile`
+it finds in `package.json`, which here is `build`, the same production build
+`make release` gates on.
+
+To run the directory's own lint rules locally, add
+[`eslint-plugin-obsidianmd`](https://github.com/obsidianmd/eslint-plugin) as a
+dev dependency. It is not currently wired into `npm run lint`.
+
 ### If something goes wrong partway
 
 The script is resumable because each step is ordinary git and gh.
