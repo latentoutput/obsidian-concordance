@@ -1,5 +1,7 @@
 # How Obsidian actually resolves wikilinks
 
+The decision these measurements fed into: [`decisions/issue-17-link-style.md`](decisions/issue-17-link-style.md).
+
 Measured against Obsidian 1.13.7 using the `test-vault/` fixture and
 `test-vault/probe.js`, run through `obsidian eval`. Obsidian does not document
 its resolution algorithm, so everything below is observed behavior rather than
@@ -12,15 +14,15 @@ https://obsidian.md/help/settings
 
 `getFirstLinkpathDest(link, source)` observed results:
 
-| Link | Source | Resolves to |
-| --- | --- | --- |
-| `afolder/amarkdowndoc` | `A/mytheme/index.md` | `A/mytheme/afolder/amarkdowndoc.md` |
-| `./afolder/amarkdowndoc` | `A/mytheme/index.md` | `A/mytheme/afolder/amarkdowndoc.md` |
-| `afolder/bdoc` | `B/mytheme/index.md` | `afolder/bdoc.md` (vault root wins) |
-| `./afolder/bdoc` | `B/mytheme/index.md` | `B/mytheme/afolder/bdoc.md` |
-| `afolder/cdoc` | `C/index.md` | `C/myafolder/cdoc.md` (!) |
-| `./afolder/cdoc` | `C/index.md` | unresolved |
-| `../mytheme/afolder/ddoc` | `D/inbox/index.md` | `D/mytheme/afolder/ddoc.md` |
+| Link                      | Source               | Resolves to                         |
+| ------------------------- | -------------------- | ----------------------------------- |
+| `afolder/amarkdowndoc`    | `A/mytheme/index.md` | `A/mytheme/afolder/amarkdowndoc.md` |
+| `./afolder/amarkdowndoc`  | `A/mytheme/index.md` | `A/mytheme/afolder/amarkdowndoc.md` |
+| `afolder/bdoc`            | `B/mytheme/index.md` | `afolder/bdoc.md` (vault root wins) |
+| `./afolder/bdoc`          | `B/mytheme/index.md` | `B/mytheme/afolder/bdoc.md`         |
+| `afolder/cdoc`            | `C/index.md`         | `C/myafolder/cdoc.md` (!)           |
+| `./afolder/cdoc`          | `C/index.md`         | unresolved                          |
+| `../mytheme/afolder/ddoc` | `D/inbox/index.md`   | `D/mytheme/afolder/ddoc.md`         |
 
 Three things follow, and they matter for any generated link text:
 
@@ -41,11 +43,11 @@ silently landing on the wrong file.
 What Obsidian writes, per "New link format", for a note in a subfolder of the
 source note's folder:
 
-| Setting | Generated |
-| --- | --- |
-| Shortest path when possible | `[[amarkdowndoc]]` |
-| Relative path to file | `[[afolder/amarkdowndoc]]` |
-| Absolute path in vault | `[[A/mytheme/afolder/amarkdowndoc]]` |
+| Setting                     | Generated                            |
+| --------------------------- | ------------------------------------ |
+| Shortest path when possible | `[[amarkdowndoc]]`                   |
+| Relative path to file       | `[[afolder/amarkdowndoc]]`           |
+| Absolute path in vault      | `[[A/mytheme/afolder/amarkdowndoc]]` |
 
 When the source note sits outside the folder being linked into, relative mode
 emits `[[../mytheme/afolder/ddoc]]`.
@@ -80,7 +82,7 @@ Four things to know:
    accumulates a mix of styles rather than converting all at once.
 4. **Moving the index note does not break a bare relative link**, because such a
    link was never resolved relative to the source. A genuinely relative
-   `./afolder/edoc1` link *does* break, resolving to nothing.
+   `./afolder/edoc1` link _does_ break, resolving to nothing.
 
 The practical consequence is that any link style the plugin picks independently
 of the vault setting will be fought by Obsidian on every rename, producing
