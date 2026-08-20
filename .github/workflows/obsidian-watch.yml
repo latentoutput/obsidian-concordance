@@ -28,18 +28,15 @@ jobs:
       - name: Check the declared API floor
         id: check
         run: |
+          # eslint-plugin-obsidianmd's no-unsupported-api covers member-level
+          # drift on every PR, so the weekly run only needs the compile against
+          # freshly downloaded floor typings. That is the part that can start
+          # failing without anyone touching this repo.
           set +e
-          {
-            node scripts/check-min-app-version.mjs
-            IMPORTS=$?
-            echo ""
-            node scripts/check-api-floor.mjs
-            FLOOR=$?
-          } > /tmp/floor-check.txt 2>&1
+          node scripts/check-api-floor.mjs > /tmp/floor-check.txt 2>&1
+          STATUS=$?
           set -e
           cat /tmp/floor-check.txt
-          STATUS=0
-          if [ "$IMPORTS" -ne 0 ] || [ "$FLOOR" -ne 0 ]; then STATUS=1; fi
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
 
       - name: Open issue on failure
@@ -49,12 +46,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          STATUS="${{ steps.check.outputs.status }}"
-          if [ "$STATUS" = "1" ]; then
-            TITLE="minAppVersion is below the honest floor for current imports"
-          else
-            TITLE="Obsidian API floor check: unknown symbols in source"
-          fi
+          TITLE="src no longer compiles against the declared minAppVersion floor"
 
           EXISTING=$(gh issue list --state open --search "\"$TITLE\" in:title" --json number --jq 'length')
           if [ "$EXISTING" -gt 0 ]; then
@@ -69,7 +61,7 @@ jobs:
             cat /tmp/floor-check.txt
             echo '```'
             echo
-            echo "See \`scripts/check-min-app-version.mjs\` and \`scripts/obsidian-api-versions.json\`."
+            echo "See \`scripts/check-api-floor.mjs\`. Either avoid the newer API or raise \`minAppVersion\`."
           } > /tmp/issue-body.md
 
           gh issue create --title "$TITLE" --body-file /tmp/issue-body.md
