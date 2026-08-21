@@ -181,7 +181,15 @@ fi
 
 say "Tagging $NEXT on main"
 run git checkout main
-run git pull --ff-only
+# Not `git pull --ff-only`. That merges whatever FETCH_HEAD holds, and
+# FETCH_HEAD accumulates an entry per fetch source. Anything that fetched this
+# repo by URL rather than by remote name, an agent or a script syncing over
+# https while the SSH remote is configured, leaves a second entry marked for
+# merge and the pull dies with "Cannot fast-forward to multiple branches" after
+# the release PR has already merged. Naming the tracking ref cannot be
+# ambiguous.
+run git fetch --quiet origin main
+run git merge --ff-only origin/main
 
 if [ -z "$DRY" ]; then
   # A tag can survive an aborted attempt. Reuse it when it points at HEAD.

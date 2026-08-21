@@ -428,8 +428,31 @@ The script is resumable because each step is ordinary git and gh.
 
 - **CI fails on the release PR.** The PR stays open. Fix it on the same
   branch, push, and it auto-merges. Then tag by hand:
-  `git checkout main && git pull --ff-only && git tag X.Y.Z && git push origin X.Y.Z`
-- **PR merged but the tag never pushed.** Just push the tag as above.
+
+  ```sh
+  git checkout main
+  git fetch origin main
+  git merge --ff-only origin/main
+  git tag -m "git tag X.Y.Z" X.Y.Z
+  git push origin X.Y.Z
+  ```
+
+  `tag.gpgsign` is on, so the tag is signed and annotated and needs a message.
+  Passing `-m` keeps it out of an editor. Merging the tracking ref rather than
+  running `git pull` is deliberate, for the reason in the next entry.
+
+- **PR merged but the tag never pushed.** Tag by hand as above. Everything the
+  release needs is already on `main`, so nothing has to be rebuilt or redone.
+
+- **"Cannot fast-forward to multiple branches" while tagging.** `git pull`
+  merges whatever `FETCH_HEAD` holds, and `FETCH_HEAD` gets one entry per
+  fetch source. If anything fetched this repo by URL rather than by remote
+  name, say a script or an agent syncing over https while the remote is SSH,
+  there are two entries both marked for merge and git refuses to choose. The
+  release stops one step from done, with the PR already merged. `git merge
+--ff-only origin/main` names the ref and cannot be ambiguous, which is what
+  the script now does. Recover by tagging by hand as above.
+
 - **Tag pushed but the workflow failed.** Fix the cause, delete the tag on
   both sides (`git tag -d X.Y.Z && git push --delete origin X.Y.Z`), and
   re-push it. The version in `manifest.json` is already correct.
