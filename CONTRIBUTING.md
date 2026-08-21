@@ -447,9 +447,29 @@ do not:
 
 ### Release notes
 
-`CHANGELOG.md` is optional. Edit it before pushing the tag only when you
-want curated hero notes (initial release, major versions, breaking changes).
-Routine patches and minor releases work fine with auto-generated notes.
+`CHANGELOG.md` is optional. Most releases are fine with the notes GitHub
+generates from commits and PRs. Curated notes are for the ones where a reader
+has to do something, and those are easy to forget precisely because they are
+rare.
+
+`scripts/changelog.sh` handles both halves of that:
+
+```sh
+scripts/changelog.sh status 0.2.0      # are notes wanted, and do they exist
+scripts/changelog.sh scaffold 0.2.0    # a draft to write over
+```
+
+It calls a release notable when `minAppVersion` moved, when a commit declared
+a breaking change, or when the bump is a major. Each of those changes who
+receives the update or how it behaves, and none of it survives auto-generation.
+`make pr` mentions it while the change is fresh, and `make release` asks before
+tagging rather than letting a notable release slip out with generated notes.
+
+The scaffold groups commit subjects into Keep a Changelog sections and stops
+there. It cannot know that a raised `minAppVersion` is the headline, or that a
+trimmed trailing space means readers must go and check a setting by hand. It
+also groups by commit prefix, which describes intent rather than audience, so
+expect to delete entries that never reach a user.
 
 To curate notes for a release, add a section like this to `CHANGELOG.md`:
 

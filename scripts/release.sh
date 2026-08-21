@@ -114,6 +114,30 @@ if [ -z "$RESUME" ]; then
   fi
   say "Releasing $CURRENT -> $NEXT"
 
+  # Notes are optional for routine releases, and autogen handles those well.
+  # This asks only when something in the release changes who gets it or how it
+  # behaves, which autogen cannot possibly explain.
+  NOTES_STATUS=$("$(dirname "$0")/changelog.sh" status "$NEXT")
+  if [ "${NOTES_STATUS%%|*}" = "needed" ]; then
+    NOTES_PRESENT="${NOTES_STATUS##*|}"
+    NOTES_WHY=$(printf '%s' "$NOTES_STATUS" | cut -d'|' -f2)
+    if [ "$NOTES_PRESENT" = "absent" ]; then
+      printf '\n  This release wants curated notes: %s.\n' "$NOTES_WHY"
+      printf '  CHANGELOG.md has no [%s] section, so the release will use\n' "$NEXT"
+      printf '  auto-generated notes, which cannot explain that.\n\n'
+      printf '  Start one with: scripts/changelog.sh scaffold %s\n\n' "$NEXT"
+      printf 'Release anyway, without curated notes?%s [y/N]: ' \
+        "${DRY:+ (dry run, nothing rides on this)}"
+      read -r NOTES_REPLY
+      case "$NOTES_REPLY" in
+        y|Y|yes|Yes|YES) ;;
+        *) echo "Canceled. Revert with: git checkout -- package.json package-lock.json manifest.json versions.json" >&2; exit 1 ;;
+      esac
+    else
+      printf '\n  Using the CHANGELOG.md [%s] section for release notes.\n' "$NEXT"
+    fi
+  fi
+
   printf '\nHave you installed this build in a real vault and exercised the commands?%s [y/N]: ' \
     "${DRY:+ (dry run, nothing rides on this)}"
   read -r REPLY
