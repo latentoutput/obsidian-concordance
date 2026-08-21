@@ -140,6 +140,15 @@ printf '\n  Bump: %s%s%s   %s%s%s  ->  %s%s%s\n' \
   "$bold$accent" "$bump" "$reset" "$dim" "$current" "$reset" "$bold$accent" "$next" "$reset"
 printf '  %sBecause %s.%s\n' "$dim" "$reason" "$reset"
 
+# Curated notes matter most when the release is not routine, and that is
+# exactly when nobody remembers to write them.
+notes=$(scripts/changelog.sh status "$next" 2>/dev/null || echo "")
+if [ "${notes%%|*}" = "needed" ] && [ "${notes##*|}" = "absent" ]; then
+  why=$(printf '%s' "$notes" | cut -d'|' -f2)
+  printf '\n  %sCurated notes wanted:%s %s.\n' "$bold$accent" "$reset" "$why"
+  printf '  %sscripts/changelog.sh scaffold %s%s\n' "$bold$cyan" "$next" "$reset"
+fi
+
 if [ -n "$last" ]; then
   printf '\n  %s unreleased commit(s) since %s would ship together:\n' "$pending" "$last"
   git log --format='    %s' "$last"..HEAD | head -10

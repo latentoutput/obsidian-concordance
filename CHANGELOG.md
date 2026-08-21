@@ -10,6 +10,39 @@ Otherwise skip it and let autogen handle the routine releases.
 Format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-08-20
+
+Settings become searchable, and compatibility narrows to Obsidian 1.13+.
+
+### Changed
+
+- **`minAppVersion` raised from 1.8.0 to 1.13.0.** This reverses the widening
+  done in 0.1.2. Obsidian 1.13 introduced the declarative settings API, and
+  there is no way to adopt it while supporting older builds. If you are on
+  Obsidian 1.8 through 1.12 you keep running 0.1.3 and will not be offered
+  this update, so nothing breaks. Update Obsidian to receive future releases.
+- The settings tab is now declared as data rather than built by hand, so
+  Obsidian can read it without opening it. Concordance settings now appear in
+  **Settings search**, which they never did before.
+- Reports label broken blocks as "Malformed blocks" rather than "Malformed
+  auto-index blocks", because a note that only mentions the markers can land
+  there too and calling it an index would overstate what we know.
+
+### Fixed
+
+- The child note filename prefix template no longer loses its trailing space
+  when you edit it. The default is `{PREFIX} - `, where that final space is
+  the separator producing `ART - Anatomy`. Editing the field trimmed it away,
+  silently changing how every child note was matched and named. If you edited
+  this setting and your indexes started missing notes, this was why. Check the
+  value and restore the trailing space.
+- An index recognised only by its `mode=` marker is no longer dropped from
+  reports when its block is broken. Previously the mode became unreadable, so
+  the note stopped counting as an index at all and went unmentioned. A
+  folder-mode index mangled by a bad edit would just stop updating in silence.
+- Tag mode guarded the wrong value, so its "no tag configured" check never
+  ran. The result was correct by accident and behaviour is unchanged.
+
 ## [0.1.2] - 2026-06-15
 
 Broadens compatibility from Catalyst (1.13.1+) to stable Obsidian releases.
