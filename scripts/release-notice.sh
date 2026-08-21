@@ -75,7 +75,12 @@ else
 fi
 
 pending=0
-[ -n "$last" ] && pending=$(git rev-list --count "$last"..HEAD 2>/dev/null || echo 0)
+pending_reaching=""
+if [ -n "$last" ]; then
+  pending=$(git rev-list --count "$last"..HEAD 2>/dev/null || echo 0)
+  pending_reaching=$(git diff --name-only "$last"..HEAD \
+    -- src/ styles.css ':(exclude)*.test.ts' 2>/dev/null || echo "")
+fi
 
 suggestion=$(scripts/suggest-bump.sh)
 bump="${suggestion%%|*}"
@@ -114,11 +119,21 @@ if [ -z "$reaching" ]; then
   else
     printf '  %sNo release owed.%s Nothing under src/ or styles.css has changed,\n' "$dim" "$reset"
   fi
-  printf '  %sso the main.js users download is unaffected.%s\n' "$dim" "$reset"
+  printf '  %sso a release would ship nothing new.%s\n' "$dim" "$reset"
+  # A backlog only matters if some of it reaches users. Saying "run make
+  # release" over a pile of tooling commits trains you to ignore the line.
   if [ "$pending" -gt 0 ] && [ -n "$last" ]; then
-    printf '\n  %sHeads up:%s %s commit(s) since %s are still unreleased from earlier work.\n' \
-      "$yellow" "$reset" "$pending" "$last"
-    printf '  Run %smake release%s when you want those to reach users.\n' "$bold" "$reset"
+    if [ -n "$pending_reaching" ]; then
+      printf '\n  %sHeads up:%s %s commit(s) since %s are unreleased, and some of\n' \
+        "$yellow" "$reset" "$pending" "$last"
+      printf '  them do reach users:\n'
+      printf '%s\n' "$pending_reaching" | sed "s/^/    $cyan/;s/\$/$reset/"
+      printf '  Run %smake release%s to ship them.\n' "$bold" "$reset"
+    else
+      printf '\n  %s%s commit(s) since %s are unreleased, none of them user facing,\n' \
+        "$dim" "$pending" "$last"
+      printf '  so there is nothing waiting on a release.%s\n' "$reset"
+    fi
   fi
   printf '\n'
   exit 0
