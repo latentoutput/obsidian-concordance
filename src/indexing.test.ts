@@ -63,7 +63,12 @@ describe("index update planning", () => {
       },
     );
 
-    const indexInfo = { file: index, prefix: "REC", displayName: "Recipes" };
+    const indexInfo = {
+      file: index,
+      prefix: "REC",
+      displayName: "Recipes",
+      source: "filename" as const,
+    };
     const plan = await createUpdatePlan(context, indexInfo, settings, false);
 
     expect(plan.status).toBe("changed");
@@ -442,6 +447,30 @@ describe("plans that cannot be written", () => {
 
     expect(plan.status).toBe("malformed-block");
     expect(plan.nextContent).toBeNull();
+  });
+
+  // A malformed block cannot say which mode it wanted, so a note relying on a
+  // mode marker alone used to stop being an index and get reported nowhere.
+  it("still reports a malformed note that only its markers identify", async () => {
+    const note = file("Notes/Recipes Overview.md");
+    const context = contextWithFiles([note], {
+      [note.path]: [
+        "%% concordance:end %%",
+        '%% concordance:start mode="folder" folder="Recipes" %%',
+      ].join("\n"),
+    });
+
+    const info = await getIndexFileInfo(context, note, settings);
+    expect(info).not.toBeNull();
+    expect(info?.source).toBe("markers");
+
+    const plan = await createUpdatePlan(context, info!, settings, false);
+    expect(plan.status).toBe("malformed-block");
+    expect(plan.nextContent).toBeNull();
+  });
+
+  it("marks a filename-matched index as such", () => {
+    expect(parseIndexFile(file("ART - Index - Art.md"), settings)?.source).toBe("filename");
   });
 
   it("reports a missing block when insertion was not requested", async () => {

@@ -188,7 +188,7 @@ class BulkUpdateModal extends Modal {
         items: planNames(missingPlans),
       },
       {
-        label: "Malformed auto-index blocks",
+        label: "Malformed blocks",
         count: malformedPlans.length,
         items: malformedPlanSummaries(malformedPlans),
       },
@@ -283,7 +283,7 @@ class UpdateCheckModal extends Modal {
         items: planNames(missingPlans),
       },
       {
-        label: "Malformed auto-index blocks",
+        label: "Malformed blocks",
         count: malformedPlans.length,
         items: malformedPlanSummaries(malformedPlans),
       },

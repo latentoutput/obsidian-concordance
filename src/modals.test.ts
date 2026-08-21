@@ -22,12 +22,14 @@ function plan(
   status: UpdatePlan["status"] = "changed",
   stats: Partial<LinkStats> = {},
   error: string | null = null,
+  source: "filename" | "markers" = "filename",
 ): UpdatePlan {
   return {
     index: {
       file: { basename, path: `${basename}.md` } as TFile,
       prefix: basename,
       displayName: basename,
+      source,
     },
     status,
     childFiles: [],
@@ -142,7 +144,23 @@ describe("bulk update confirmation", () => {
     expect(labels).toContain("Indexes with changes: 1");
     expect(labels).toContain("Total links added: 1");
     expect(labels).toContain("Missing auto-index blocks: 1");
-    expect(labels).toContain("Malformed auto-index blocks: 1");
+    expect(labels).toContain("Malformed blocks: 1");
+  });
+
+  it("hedges a note recognised only by its markers", () => {
+    void confirmBulkUpdate(
+      app,
+      [
+        plan("Named", "malformed-block", {}, "end before start", "filename"),
+        plan("Unnamed", "malformed-block", {}, "end before start", "markers"),
+      ],
+      settings,
+    );
+
+    const items = lastModal().contentEl.textOf("li").join(" | ");
+    expect(items).toContain("Named: end before start");
+    expect(items).not.toContain("Named: end before start (matched");
+    expect(items).toContain("Unnamed: end before start (matched on its markers, not its filename)");
   });
 
   it("offers the missing-block toggle only when there are missing blocks", () => {
