@@ -36,7 +36,7 @@ function plan(
   stats: Partial<LinkStats> = {},
 ): UpdatePlan {
   return {
-    index: { file: file(basename), prefix: basename, displayName: basename },
+    index: { file: file(basename), prefix: basename, displayName: basename, source: "filename" },
     status,
     childFiles: [],
     generatedLinks: [],

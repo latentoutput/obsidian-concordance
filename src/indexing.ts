@@ -54,7 +54,7 @@ export function parseIndexFile(file: TFile, settings: ConcordanceSettings): Inde
     return null;
   }
 
-  return { file, prefix, displayName };
+  return { file, prefix, displayName, source: "filename" };
 }
 
 export function findIndexes(files: TFile[], settings: ConcordanceSettings): IndexInfo[] {
@@ -77,6 +77,14 @@ export async function getIndexFileInfo(
   const content = await context.vault.cachedRead(file);
   const inspection = inspectGeneratedBlock(content, settings);
 
+  // A malformed block cannot say which mode it wanted, so this note would
+  // otherwise not count as an index at all and would be reported nowhere. A
+  // folder-mode index broken by a bad paste would just stop updating, in
+  // silence. Surface it, and let the summary hedge on how it was recognised.
+  if (inspection.status === "malformed-block") {
+    return { file, prefix: "", displayName: file.basename, source: "markers" };
+  }
+
   if (inspection.status !== "found") {
     return null;
   }
@@ -85,7 +93,7 @@ export async function getIndexFileInfo(
     return null;
   }
 
-  return { file, prefix: "", displayName: file.basename };
+  return { file, prefix: "", displayName: file.basename, source: "markers" };
 }
 
 export async function createUpdatePlan(

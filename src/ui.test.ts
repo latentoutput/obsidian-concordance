@@ -23,6 +23,7 @@ function plan(
       file: { basename, path: `${basename}.md` } as TFile,
       prefix: basename,
       displayName: basename,
+      source: "filename",
     },
     status: "changed",
     childFiles: [],
@@ -76,6 +77,17 @@ describe("plan summaries", () => {
     ]);
 
     expect(summaries).toEqual(["Art: end marker before start marker", "Science"]);
+  });
+
+  it("hedges only the plans recognised by their markers", () => {
+    const named = plan("Named", {}, "end before start");
+    const unnamed = plan("Unnamed", {}, "end before start");
+    unnamed.index.source = "markers";
+
+    expect(malformedPlanSummaries([named, unnamed])).toEqual([
+      "Named: end before start",
+      "Unnamed: end before start (matched on its markers, not its filename)",
+    ]);
   });
 
   it("totals links across plans", () => {

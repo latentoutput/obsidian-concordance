@@ -52,9 +52,11 @@ trip through storage into `data.json`, and each setting is findable in
 Obsidian's settings search. It restores what it changed and prints `ALL PASS`.
 It is what caught the child prefix template losing its trailing space.
 
-What still needs a human is appearance: `app.setting.open()` does not
-instantiate the modal from `eval`, so nobody has looked at the rendered rows
-but you.
+The three commands can be driven the same way, against the index fixtures in
+`test-vault/Concordance/`. See that vault's README for what each fixture
+covers and for the one trap worth knowing: Obsidian renders modals into
+whichever window is active, so a settings window left open swallows them and
+`eval` cannot find them.
 
 ## Project layout
 
@@ -285,11 +287,14 @@ you have read a word of it: green for a patch, yellow for a minor, red for a
 major. Colour is on when stdout is a terminal. `NO_COLOR` disables it,
 `FORCE_COLOR` keeps it through a pipe.
 
-To ask the question at any other time, pass a base:
+It asks a different question depending on where it runs. On a branch with
+commits of its own, the question is what this branch adds, so it compares
+against `main` and talks about the PR. On `main` that comparison is empty by
+definition, so it compares against the last tag and tells you what is owed:
 
 ```sh
-scripts/release-notice.sh 0.1.3                  # a release from here
-FORCE_COLOR=1 scripts/release-notice.sh | less -R  # keep the colour
+scripts/release-notice.sh          # on main: is a release owed, and which
+scripts/release-notice.sh 0.1.3    # or name a base explicitly
 ```
 
 ## Cutting a release

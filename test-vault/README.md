@@ -43,3 +43,48 @@ in Obsidian's settings search. It restores whatever it changed in a `finally`
 block and prints `ALL PASS` or a count of failures.
 
 This is what caught the child prefix template losing its trailing space.
+
+## Concordance fixtures
+
+`Concordance/` holds index notes covering every status the plugin reports, so
+the three commands can be exercised against something real. They are committed
+in their pre-run state, needing an update, so the check means something each
+time. Reset them with `git checkout test-vault/Concordance` after a run.
+
+| Note                        | Exercises                                  |
+| --------------------------- | ------------------------------------------ |
+| `CON - Index - Prefix.md`   | prefix mode, matched by filename template  |
+| `Folder Index.md`           | `mode="folder"`, matched by marker          |
+| `Tag Index.md`              | `mode="tag"` over `#concordance-fixture`    |
+| `CON - Index - Missing.md`  | recognised as an index, has no block        |
+| `CON - Index - Malformed.md`| broken block, recognised by filename        |
+| `Broken Folder Index.md`    | broken block, recognised only by markers    |
+
+A healthy run reports 6 indexes found, 3 needing updates, 6 links to add, 1
+missing block and 2 malformed.
+
+The last two fixtures are a pair on purpose. Both have their markers reversed;
+they differ only in whether the filename matches the index template. That
+changes how sure the plugin can be, and the summary says so: the named one is
+reported plainly, while the other carries "(matched on its markers, not its
+filename)", because a note that merely documents the markers looks identical
+from the plugin's side.
+
+## Exercising the commands
+
+With the vault open and the current build installed:
+
+    make install-local VAULT=test-vault
+    obsidian plugin:reload id=concordance
+
+Then run `Check indexes for updates`, `Update all indexes`, and
+`Update current index` from the command palette, or drive them through
+`obsidian eval`.
+
+> [!important] Modals render into whichever window is active
+> Obsidian puts the settings tab in its own window. If that window is open,
+> plugin modals render there too, and `document.querySelector` from `obsidian
+> eval` will not find them, which looks exactly like the modal failing to
+> open. Call `app.setting.close()` first, and reach a modal through
+> `document.querySelector(".modal-container").ownerDocument` rather than
+> assuming `document`.

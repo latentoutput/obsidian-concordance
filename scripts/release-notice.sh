@@ -40,8 +40,29 @@ fi
 
 rule="════════════════════════════════════════════════════════════════"
 
-base="${1:-origin/main}"
-git rev-parse --verify --quiet "$base" >/dev/null || base="main"
+# Two questions, depending on where this runs.
+#
+# On a branch with commits of its own, the question is what this branch adds,
+# so compare against main. On main, that comparison is empty by definition and
+# the real question is what has piled up unreleased, so compare against the
+# last tag. Getting this wrong made it report "no release owed" directly above
+# a list of unreleased commits.
+mainref="origin/main"
+git rev-parse --verify --quiet "$mainref" >/dev/null || mainref="main"
+ahead=$(git rev-list --count "$mainref"..HEAD 2>/dev/null || echo 0)
+[ "$ahead" -gt 0 ] && pending_merge="yes" || pending_merge=""
+
+last=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+if [ $# -ge 1 ]; then
+  base="$1"
+elif [ -n "$pending_merge" ]; then
+  base="$mainref"
+else
+  base="${last:-$mainref}"
+fi
+git rev-parse --verify --quiet "$base" >/dev/null || base="$mainref"
+
 fork=$(git merge-base HEAD "$base" 2>/dev/null || echo "")
 
 # Only src/ and styles.css reach main.js, which is all a user ever downloads,
@@ -53,7 +74,6 @@ else
   reaching=""
 fi
 
-last=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 pending=0
 [ -n "$last" ] && pending=$(git rev-list --count "$last"..HEAD 2>/dev/null || echo 0)
 
@@ -62,10 +82,20 @@ bump="${suggestion%%|*}"
 reason="${suggestion#*|}"
 
 case "$bump" in
-  major) accent="$red";    banner="$on_red$white";     verdict="THIS PR NEEDS A MAJOR RELEASE" ;;
-  minor) accent="$yellow"; banner="$on_yellow$black";  verdict="THIS PR NEEDS A MINOR RELEASE" ;;
-  *)     accent="$green";  banner="$on_green$black";   verdict="THIS PR NEEDS A PATCH RELEASE" ;;
+  major) accent="$red";    banner="$on_red$white";    level="MAJOR" ;;
+  minor) accent="$yellow"; banner="$on_yellow$black"; level="MINOR" ;;
+  *)     accent="$green";  banner="$on_green$black";  level="PATCH" ;;
 esac
+
+if [ -n "$pending_merge" ]; then
+  verdict="THIS PR NEEDS A $level RELEASE"
+  files_label="Files in this PR that reach users:"
+  when="Once this merges, from a clean main:"
+else
+  verdict="A $level RELEASE IS OWED"
+  files_label="Files that reach users:"
+  when="From a clean main:"
+fi
 
 current=$(node -p "require('./package.json').version")
 next=$(node -e '
@@ -79,7 +109,11 @@ next=$(node -e '
 printf '\n'
 
 if [ -z "$reaching" ]; then
-  printf '  %sNo release needed for this PR.%s Nothing under src/ or styles.css changed,\n' "$dim" "$reset"
+  if [ -n "$pending_merge" ]; then
+    printf '  %sNo release needed for this PR.%s Nothing under src/ or styles.css changed,\n' "$dim" "$reset"
+  else
+    printf '  %sNo release owed.%s Nothing under src/ or styles.css has changed,\n' "$dim" "$reset"
+  fi
   printf '  %sso the main.js users download is unaffected.%s\n' "$dim" "$reset"
   if [ "$pending" -gt 0 ] && [ -n "$last" ]; then
     printf '\n  %sHeads up:%s %s commit(s) since %s are still unreleased from earlier work.\n' \
@@ -100,7 +134,7 @@ pad() { printf '%*s' $((22 - ${#1})) ''; }
 printf '%s%s%s\n' "$accent$bold" "$rule" "$reset"
 printf '%s%s %-*s%s\n' "$banner" "$bold" "$((${#rule} - 1))" "$verdict" "$reset"
 printf '%s%s%s\n' "$accent$bold" "$rule" "$reset"
-printf '\n  Files in this PR that reach users:\n'
+printf '\n  %s\n' "$files_label"
 printf '%s\n' "$reaching" | sed "s/^/    $cyan/;s/\$/$reset/"
 printf '\n  Bump: %s%s%s   %s%s%s  ->  %s%s%s\n' \
   "$bold$accent" "$bump" "$reset" "$dim" "$current" "$reset" "$bold$accent" "$next" "$reset"
@@ -113,7 +147,7 @@ if [ -n "$last" ]; then
   [ "$extra" -gt 0 ] && printf '    ... and %s more\n' "$extra"
 fi
 
-printf '\n  Once this merges, from a clean main:\n\n'
+printf '\n  %s\n\n' "$when"
 printf '      %s%s%s%s%s# straight to %s, no prompt%s\n' \
   "$bold$cyan" "$suggested" "$reset" "$(pad "$suggested")" "$dim" "$next" "$reset"
 printf '      %s%s%s%s%s# same analysis, asks first%s\n' \
