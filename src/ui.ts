@@ -54,9 +54,19 @@ export function linkChangeSummaries(plans: UpdatePlan[], key: keyof LinkStats): 
 }
 
 export function malformedPlanSummaries(plans: UpdatePlan[]): string[] {
-  return plans.map((plan) =>
-    plan.error ? `${plan.index.file.basename}: ${plan.error}` : plan.index.file.basename,
-  );
+  return plans.map((plan) => {
+    const parts = [plan.index.file.basename];
+    if (plan.error) {
+      parts.push(`: ${plan.error}`);
+    }
+    // Say why we are unsure. A note that only documents the markers looks the
+    // same from here, and telling someone their notes are broken when they are
+    // not is worse than saying nothing.
+    if (plan.index.source === "markers") {
+      parts.push(" (matched on its markers, not its filename)");
+    }
+    return parts.join("");
+  });
 }
 
 export function sumLinks(plans: UpdatePlan[], key: keyof LinkStats): number {

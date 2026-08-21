@@ -4,6 +4,13 @@ export interface IndexInfo {
   file: TFile;
   prefix: string;
   displayName: string;
+  /**
+   * How this note was recognised as an index. "filename" means it matches the
+   * configured template, which is unambiguous. "markers" means the only
+   * evidence is the block inside it, which a note merely documenting the
+   * plugin could also carry, so anything reported about it is hedged.
+   */
+  source: "filename" | "markers";
 }
 
 export interface LinkStats {
